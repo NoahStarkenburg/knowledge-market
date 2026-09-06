@@ -1,0 +1,111 @@
+/* Fonts are loaded via <link> tags in index.html so the parser can start the
+   request before the CSS is fetched. Don't re-import here. */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-size: 16px;
+
+  /* Surfaces */
+  --paper:  #f4f3ee;   /* page ground */
+  --paper-dim: #e7e5dd;
+  --chalk:  #ffffff;   /* raised surface */
+
+  /* Ink */
+  --ink:      #121212;
+  --ink-soft: #3a3a3a;
+  --ink-mute: #6b6b66;
+
+  /* Protagonist + accents */
+  --cobalt:      #1d24e8;
+  --cobalt-deep: #141a9e;
+  --signal:      #ffd60a;
+  --danger:      #c81e1e;
+
+  /* Legacy aliases so any not-yet-converted markup degrades sanely */
+  --accent: var(--cobalt);
+  --background: var(--paper);
+  --foreground: var(--ink);
+}
+
+html {
+  font-size: var(--font-size);
+  font-family: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--paper);
+  color: var(--ink);
+  line-height: 1.5;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Display type: heavy grotesk, set tight. Most headings are styled per-component;
+   these are sane defaults for stray h1/h2/h3. */
+h1, h2, h3 {
+  font-family: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.0;
+  text-wrap: balance;
+}
+
+::selection {
+  background: var(--cobalt);
+  color: #ffffff;
+}
+
+:focus-visible {
+  outline: 3px solid var(--cobalt);
+  outline-offset: 2px;
+  border-radius: 0;
+}
+
+@layer utilities {
+  /* Faint structural grid — the quiet Swiss scaffold behind loud type. */
+  .bg-grid {
+    background-image:
+      linear-gradient(to right, rgba(18, 18, 18, 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(18, 18, 18, 0.05) 1px, transparent 1px);
+    background-size: 64px 64px;
+  }
+  .bg-grid-cobalt {
+    background-image:
+      linear-gradient(to right, rgba(255, 255, 255, 0.12) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.12) 1px, transparent 1px);
+    background-size: 56px 56px;
+  }
+  /* Kept as a no-op hook so existing markup stays valid; headlines render at
+     Archivo's normal width (the expanded width read as stretched). */
+  .display-x {
+    font-stretch: normal;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,14 @@
+# gitleaks allowlist.
+#
+# Each line is a finding fingerprint that has been reviewed and accepted.
+# Format: <file>:<rule-id>:<line>
+#
+# Add entries ONLY after confirming the value is not a real credential, and
+# always say why. An unexplained entry here is how a real secret gets waved
+# through six months from now.
+
+# Hard-coded JWT signing key used by the integration test host. It is a fixed,
+# non-secret literal chosen to satisfy the 32-byte minimum; the tests need a
+# deterministic key so issued tokens validate within a single test run. It
+# protects nothing and is never used outside the in-memory test server.
+tests/IntegrationTests/ApiFactory.cs:generic-api-key:29

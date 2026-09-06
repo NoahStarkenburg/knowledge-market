@@ -1,0 +1,31 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Application</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AutoMapper" Version="13.0.1" />
+    <PackageReference Include="FluentValidation" Version="11.11.0" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.11.0" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.Abstractions" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.10" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Contracts\Domain.Contracts.csproj" />
+    <ProjectReference Include="..\Domain.Identity\Domain.Identity.csproj" />
+    <ProjectReference Include="..\Domain.Catalog\Domain.Catalog.csproj" />
+    <ProjectReference Include="..\Domain.Orders\Domain.Orders.csproj" />
+    <ProjectReference Include="..\..\Domain.Cart\Domain.Cart.csproj" />
+    <ProjectReference Include="..\..\Domain.Content\Domain.Content.csproj" />
+    <ProjectReference Include="..\Domain.Media\Domain.Media.csproj" />
+    <ProjectReference Include="..\Domain.Search\Domain.Search.csproj" />
+    <ProjectReference Include="..\Domain.Payments\Domain.Payments.csproj" />
+    <ProjectReference Include="..\..\Domain.Primatives\Domain.Primitives.csproj" />
+  </ItemGroup>
+
+</Project>

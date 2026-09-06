@@ -1,0 +1,48 @@
+# Local development dependencies.
+#
+# This file starts the services the app DEPENDS ON. It does not run the app
+# itself — you run that on your host with `dotnet run` and `npm run dev`, so
+# you keep the debugger, hot reload, and a fast rebuild loop.
+#
+#     docker compose up -d      # start
+#     docker compose ps         # check health
+#     docker compose down       # stop, keep data
+#     docker compose down -v    # stop and DELETE data (fresh database)
+
+services:
+  mssql:
+    # Pinned to a major version on purpose. "latest" means two developers can
+    # silently be on different engines, and a bug one of them cannot reproduce.
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: km-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      # This password is NOT a secret, and committing it is deliberate.
+      # It protects a container bound to your own machine, created from this
+      # very file — anyone who can read this file can already start their own.
+      # Contrast with Jwt:SigningKey or a Stripe secret key, which authorize
+      # real actions and therefore live in user-secrets. "Is it a secret?"
+      # depends on what it protects and who can reach it, not on the word
+      # "password". See README.
+      MSSQL_SA_PASSWORD: "Dev_Only_LocalPassword_123!"
+      # Developer edition: free for non-production use, full feature set.
+      MSSQL_PID: Developer
+    ports:
+      # host:container. If 1433 is already taken on your machine, change the
+      # LEFT number only, and update ConnectionStrings:Default to match.
+      - "1433:1433"
+    volumes:
+      # Named volume, so your data survives `docker compose down`.
+      - mssqldata:/var/opt/mssql
+    healthcheck:
+      # Reports healthy only once the engine actually answers a query, not
+      # merely when the process starts. The API migrates on startup, so it
+      # needs the database genuinely ready, not just listening.
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+volumes:
+  mssqldata:

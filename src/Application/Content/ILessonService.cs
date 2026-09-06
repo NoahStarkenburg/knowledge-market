@@ -1,4 +1,4 @@
-using Contracts.Content;
+﻿using Domain.Contracts.Content;
 using Domain.Contracts.Content;
 
 namespace Application.Content;

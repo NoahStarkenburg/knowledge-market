@@ -1,7 +1,7 @@
-﻿using Api.Auth.Handlers;
-using Api.Auth.Resources;
+﻿using Api.Authorization.Handlers;
+using Api.Authorization.Resources;
 
-namespace Api.Auth.AccessService
+namespace Api.Authorization.AccessService
 {
     public interface IAccessService
     {

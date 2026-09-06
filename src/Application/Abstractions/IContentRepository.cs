@@ -1,5 +1,5 @@
-using Application.Content;
-using Contracts.Content;
+﻿using Application.Content;
+using Domain.Contracts.Content;
 using Domain.Content;
 using Domain.Contracts.Content;
 

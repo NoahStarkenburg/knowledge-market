@@ -1,4 +1,4 @@
-﻿namespace Contracts.Content;
+﻿namespace Domain.Contracts.Content;
 
 public sealed record LessonContentDto(
     Guid LessonId,

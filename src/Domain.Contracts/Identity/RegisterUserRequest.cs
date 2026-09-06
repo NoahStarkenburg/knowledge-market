@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Contracts.Identity
+namespace Domain.Contracts.Identity
 {
     public sealed record RegisterUserRequest(
         string Email,

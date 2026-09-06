@@ -1,4 +1,4 @@
-﻿using Api.Auth.Handlers;
+﻿using Api.Authorization.Handlers;
 using Microsoft.AspNetCore.Authorization;
 
 namespace Api.Authorization.Policies

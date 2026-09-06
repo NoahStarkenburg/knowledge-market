@@ -1,6 +1,6 @@
-using Application.Abstractions;
+﻿using Application.Abstractions;
 using Application.Content;
-using Contracts.Content;
+using Domain.Contracts.Content;
 using Domain.Content;
 using Domain.Contracts.Content;
 using Infrastructure.Catalog;

@@ -1,4 +1,4 @@
-using Api.Auth;
+﻿using Api.Authorization;
 using Application.Orders;
 using Domain.Contracts.Orders;
 using Microsoft.AspNetCore.Authorization;

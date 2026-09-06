@@ -8,7 +8,7 @@ using Infrastructure.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
-namespace Infrastructure.Indentity
+namespace Infrastructure.Identity
 {
     public sealed class UsersDbContextFactory : IDesignTimeDbContextFactory<UsersDbContext>
     {

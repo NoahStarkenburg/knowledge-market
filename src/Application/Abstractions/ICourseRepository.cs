@@ -1,6 +1,6 @@
-using Application.Catalog;
+﻿using Application.Catalog;
 using Application.Common;
-using Contracts.Catalog;
+using Domain.Contracts.Catalog;
 using Domain.Catalog;
 
 namespace Application.Abstractions;

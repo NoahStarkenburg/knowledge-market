@@ -1,7 +1,7 @@
-using Application.Abstractions;
+﻿using Application.Abstractions;
 using Application.Common;
 using AutoMapper;
-using Contracts.Identity;
+using Domain.Contracts.Identity;
 using Domain.Identity;
 using FluentValidation;
 

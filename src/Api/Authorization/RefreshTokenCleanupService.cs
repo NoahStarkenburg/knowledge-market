@@ -1,7 +1,7 @@
-using Infrastructure.Identity;
+﻿using Infrastructure.Identity;
 using Microsoft.EntityFrameworkCore;
 
-namespace Api.Auth;
+namespace Api.Authorization;
 
 // Runs once at startup then every 24 hours.
 // Deletes refresh tokens that expired more than 24 hours ago — keeps the

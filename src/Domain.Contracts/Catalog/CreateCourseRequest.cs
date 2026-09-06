@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Contracts.Catalog
+namespace Domain.Contracts.Catalog
 {
     public sealed record CreateCourseRequest(
         string Title,

@@ -1,5 +1,5 @@
-using AutoMapper;
-using Contracts.Catalog;
+﻿using AutoMapper;
+using Domain.Contracts.Catalog;
 using Domain.Catalog;
 
 namespace Application.Catalog;

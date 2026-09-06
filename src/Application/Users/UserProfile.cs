@@ -1,5 +1,5 @@
-using AutoMapper;
-using Contracts.Identity;
+﻿using AutoMapper;
+using Domain.Contracts.Identity;
 using Domain.Identity;
 
 namespace Application.Users;

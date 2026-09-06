@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization.Infrastructure;
 
-namespace Api.Auth.Handlers
+namespace Api.Authorization.Handlers
 {
     public static class CourseOps
     {

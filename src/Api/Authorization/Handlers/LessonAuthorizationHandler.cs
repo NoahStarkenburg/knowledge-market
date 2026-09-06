@@ -1,9 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
-using Api.Auth.AccessService;
-using Api.Auth.Resources;
+using Api.Authorization.AccessService;
+using Api.Authorization.Resources;
 
-namespace Api.Auth.Handlers
+namespace Api.Authorization.Handlers
 {
     public sealed class LessonAuthorizationHandler(
     ICurrentUser currentUser,

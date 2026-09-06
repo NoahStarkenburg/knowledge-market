@@ -1,5 +1,5 @@
-using Api.Auth;
-using Api.Auth.Resources;
+﻿using Api.Authorization;
+using Api.Authorization.Resources;
 using Api.Authorization.Policies;
 using Application.Abstractions;
 using Application.Content;

@@ -1,5 +1,5 @@
-using Application.Common;
-using Contracts.Catalog;
+﻿using Application.Common;
+using Domain.Contracts.Catalog;
 
 namespace Application.Catalog;
 

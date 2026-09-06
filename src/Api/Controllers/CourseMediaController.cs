@@ -1,4 +1,4 @@
-using Api.Auth;
+﻿using Api.Authorization;
 using Application.Abstractions;
 using Application.Uploads;
 using Microsoft.AspNetCore.Authorization;

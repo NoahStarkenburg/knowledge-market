@@ -1,11 +1,11 @@
-﻿using Api.Auth.Handlers;
-using Api.Auth.Resources;
+﻿using Api.Authorization.Handlers;
+using Api.Authorization.Resources;
 using Domain.Orders;
 using Infrastructure.Catalog;
 using Infrastructure.Orders;
 using Microsoft.EntityFrameworkCore;
 
-namespace Api.Auth.AccessService;
+namespace Api.Authorization.AccessService;
 
 public sealed class AccessService(
     OrdersDbContext ordersDb,

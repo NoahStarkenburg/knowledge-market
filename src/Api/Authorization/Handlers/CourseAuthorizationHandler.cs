@@ -1,11 +1,11 @@
 ﻿using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
-using Api.Auth.AccessService;
-using Api.Auth.Resources;
+using Api.Authorization.AccessService;
+using Api.Authorization.Resources;
 using System.Security.Claims;
 using Api.Authorization.Claims;
 
-namespace Api.Auth.Handlers
+namespace Api.Authorization.Handlers
 {
     public sealed class CourseAuthorizationHandler(
 ) : AuthorizationHandler<OperationAuthorizationRequirement, CourseShell>

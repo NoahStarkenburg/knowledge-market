@@ -1,4 +1,4 @@
-using Api.Auth;
+﻿using Api.Authorization;
 using Application.Creator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

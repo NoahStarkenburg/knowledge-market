@@ -1,8 +1,8 @@
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using Application.Abstractions;
 using Application.Common;
 using AutoMapper;
-using Contracts.Catalog;
+using Domain.Contracts.Catalog;
 using Domain.Catalog;
 using FluentValidation;
 using Microsoft.Extensions.Logging;

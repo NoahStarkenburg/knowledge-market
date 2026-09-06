@@ -1,6 +1,6 @@
-using Application.Abstractions;
+﻿using Application.Abstractions;
 using Application.Common;
-using Contracts.Identity;
+using Domain.Contracts.Identity;
 using Domain.Identity;
 using Microsoft.EntityFrameworkCore;
 

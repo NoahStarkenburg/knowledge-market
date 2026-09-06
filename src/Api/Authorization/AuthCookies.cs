@@ -1,5 +1,5 @@
 ﻿// FILE: src/Api/Auth/AuthCookies.cs
-namespace Api.Auth;
+namespace Api.Authorization;
 
 public static class AuthCookies
 {

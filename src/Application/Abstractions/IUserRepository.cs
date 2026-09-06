@@ -1,5 +1,5 @@
-using Application.Common;
-using Contracts.Identity;
+﻿using Application.Common;
+using Domain.Contracts.Identity;
 using Domain.Identity;
 
 namespace Application.Abstractions;

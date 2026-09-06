@@ -65,9 +65,14 @@ Serves on <http://localhost:5173>.
 
 **4. Seed sample data (optional).**
 
+
 ```bash
-curl -X POST http://localhost:5116/api/dev/bulk-seed
-```
+CSRF=$(curl -s -X POST http://localhost:5116/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@knowledgemarket.local","password":"DevAdmin@LocalOnly!"}' \
+  -c cookies.txt | jq -r .csrf)
+
+curl -X POST http://localhost:5116/api/dev/bulk-seed -b cookies.txt -H "X-CSRF: $CSRF"
 
 Generates courses, lessons, and users. Available in Development only.
 

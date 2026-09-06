@@ -16,18 +16,28 @@ public sealed class RefreshTokenCleanupService(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        while (!stoppingToken.IsCancellationRequested)
+        try
         {
-            try
+            while (!stoppingToken.IsCancellationRequested)
             {
-                await CleanupAsync(stoppingToken);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                logger.LogError(ex, "Refresh token cleanup failed.");
-            }
+                try
+                {
+                    await CleanupAsync(stoppingToken);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    logger.LogError(ex, "Refresh token cleanup failed.");
+                }
 
-            await Task.Delay(Interval, stoppingToken);
+                await Task.Delay(Interval, stoppingToken);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected: the host is shutting down and cancelled stoppingToken.
+            // Letting it escape would fault the BackgroundService, which under the
+            // default BackgroundServiceExceptionBehavior.StopHost logs a fatal error
+            // on every normal shutdown.
         }
     }
 

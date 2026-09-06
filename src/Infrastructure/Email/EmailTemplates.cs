@@ -1,4 +1,4 @@
-namespace Api.Email;
+﻿namespace Infrastructure.Email;
 
 public static class EmailTemplates
 {

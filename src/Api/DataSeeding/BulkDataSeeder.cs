@@ -1,6 +1,6 @@
 ﻿using Application.Abstractions;
 using Shared.Abstractions;
-using Api.Storage;
+using Infrastructure.Storage;
 using Bogus;
 using Domain.Catalog;
 using Domain.Content;

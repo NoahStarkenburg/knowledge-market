@@ -1,10 +1,11 @@
-﻿using System.Text.Json;
+﻿using Microsoft.Extensions.Logging;
+using System.Text.Json;
 using Application.Abstractions;
 using Shared.Abstractions;
 using Shared.Kernel;
 using Microsoft.Extensions.Caching.Distributed;
 
-namespace Api.Caching;
+namespace Infrastructure.Caching;
 
 // Redis-backed ICacheStore. Values are stored as UTF-8 JSON with an absolute TTL. Every operation
 // is wrapped so a Redis outage degrades to a cache miss (reads) or a no-op (writes/invalidation)

@@ -1,5 +1,6 @@
 ﻿using Api.Authorization;
-using Api.Email;
+using Application.Abstractions;
+using Infrastructure.Email;
 using Application.Catalog;
 using Application.Users;
 using Domain.Contracts.Identity;

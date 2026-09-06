@@ -1,4 +1,4 @@
-namespace Api.Email;
+﻿namespace Application.Abstractions;
 
 public interface IEmailService
 {

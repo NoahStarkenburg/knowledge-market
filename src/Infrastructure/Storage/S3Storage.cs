@@ -1,11 +1,13 @@
-﻿using Amazon.S3;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Amazon.S3;
 using Amazon.S3.Model;
 using Application.Abstractions;
 using Shared.Abstractions;
 using Infrastructure.Content;
 using Microsoft.EntityFrameworkCore;
 
-namespace Api.Storage
+namespace Infrastructure.Storage
 {
     public sealed class S3Storage : IStorage
     {

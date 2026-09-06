@@ -62,12 +62,10 @@ appsettings.*.local.json
 # ---------------------------------------------------------------------------
 # Runtime data this app writes into its own source tree
 # ---------------------------------------------------------------------------
-# LocalStorage writes uploaded media into src/Api/Storage/ — the SAME folder
-# that holds the storage provider's C# source. So ignore everything in there
-# except the source files. (The app writing runtime data into its own source
-# tree is a design wart worth fixing later; this rule contains the damage.)
-src/Api/Storage/*
-!src/Api/Storage/*.cs
+# LocalStorage writes uploaded media here (Storage:Root in config). The storage
+# provider's source now lives in Infrastructure/Storage, so this path holds
+# nothing but runtime data.
+src/Api/Storage/
 
 # IContentStorage writes lesson markdown here.
 src/Api/content/

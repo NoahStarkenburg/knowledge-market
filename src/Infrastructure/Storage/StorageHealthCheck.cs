@@ -1,7 +1,9 @@
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Amazon.S3;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
-namespace Api.Observability;
+namespace Infrastructure.Storage;
 
 // Uploads and lesson media are unusable if object storage is unreachable, so readiness
 // covers it. The probe is a metadata call on the bucket rather than a read or write:

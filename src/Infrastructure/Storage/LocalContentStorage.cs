@@ -1,8 +1,11 @@
-﻿using System.Text;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using System.Text;
 using Application.Abstractions;
 using Shared.Abstractions;
 
-namespace Api.ContentStorage
+namespace Infrastructure.Storage
 {
     public sealed class LocalContentStorage : IContentStorage
     {

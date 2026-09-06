@@ -1,4 +1,7 @@
-namespace Api.Email;
+﻿using Microsoft.Extensions.Logging;
+using Application.Abstractions;
+
+namespace Infrastructure.Email;
 
 // Used in development — logs instead of sending
 public sealed class NullEmailService : IEmailService

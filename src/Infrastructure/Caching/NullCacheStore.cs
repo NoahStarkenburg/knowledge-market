@@ -1,7 +1,8 @@
-﻿using Application.Abstractions;
+﻿using Microsoft.Extensions.Logging;
+using Application.Abstractions;
 using Shared.Abstractions;
 
-namespace Api.Caching;
+namespace Infrastructure.Caching;
 
 // Fallback used when Redis is not configured (Redis:ConnectionString empty). Every read is a miss
 // and every write is a no-op, so services fall straight through to their data source. This keeps

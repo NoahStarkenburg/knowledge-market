@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
@@ -12,7 +12,6 @@
     <PackageReference Include="AspNetCore.HealthChecks.Redis" Version="9.0.0" />
     <PackageReference Include="Bogus" Version="35.*" />
     <PackageReference Include="AWSSDK.S3" Version="3.7.*" />
-    <PackageReference Include="Hellang.Middleware.ProblemDetails" Version="6.5.1" />
     <PackageReference Include="MailKit" Version="4.15.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.10" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="9.0.10" />
@@ -46,14 +45,8 @@
     <ProjectReference Include="..\Domain.Identity\Domain.Identity.csproj" />
     <ProjectReference Include="..\Domain.Catalog\Domain.Catalog.csproj" />
     <ProjectReference Include="..\Domain.Orders\Domain.Orders.csproj" />
-    <ProjectReference Include="..\Domain.Payments\Domain.Payments.csproj" />
-    <ProjectReference Include="..\Domain.Media\Domain.Media.csproj" />
-    <ProjectReference Include="..\Domain.Search\Domain.Search.csproj" />
     <ProjectReference Include="..\Application\Application.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Storage\staged\c40112e53b464a6bb2af9752cec18dfd\55f702f0c61a445492896f63a7183585\" />
-  </ItemGroup>
 
 </Project>

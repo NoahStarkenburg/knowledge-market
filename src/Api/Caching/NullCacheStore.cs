@@ -1,4 +1,5 @@
-using Application.Abstractions;
+﻿using Application.Abstractions;
+using Shared.Abstractions;
 
 namespace Api.Caching;
 

@@ -2,7 +2,7 @@
 using System.Text.Json;
 using Application.Abstractions;
 using Application.Catalog;
-using Application.Common;
+using Shared.Kernel;
 using Domain.Contracts.Catalog;
 using Dapper;
 using Domain.Catalog;

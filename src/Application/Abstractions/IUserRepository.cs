@@ -1,4 +1,4 @@
-﻿using Application.Common;
+﻿using Shared.Kernel;
 using Domain.Contracts.Identity;
 using Domain.Identity;
 

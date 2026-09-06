@@ -1,5 +1,6 @@
 ﻿using Application.Abstractions;
-using Application.Common;
+using Shared.Abstractions;
+using Shared.Kernel;
 using Domain.Contracts.Content;
 using Domain.Content;
 using Domain.Contracts.Content;

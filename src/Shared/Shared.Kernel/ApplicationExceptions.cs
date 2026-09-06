@@ -1,4 +1,4 @@
-namespace Application.Common;
+﻿namespace Shared.Kernel;
 
 // Thrown by services to signal a missing resource. Mapped to 404 by the API exception filter.
 public sealed class NotFoundException(string message) : Exception(message);

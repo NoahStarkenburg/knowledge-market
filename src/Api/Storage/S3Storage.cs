@@ -1,6 +1,7 @@
-using Amazon.S3;
+﻿using Amazon.S3;
 using Amazon.S3.Model;
 using Application.Abstractions;
+using Shared.Abstractions;
 using Infrastructure.Content;
 using Microsoft.EntityFrameworkCore;
 

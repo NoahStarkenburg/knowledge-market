@@ -1,5 +1,6 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using Application.Abstractions;
+using Shared.Abstractions;
 
 namespace UnitTests;
 

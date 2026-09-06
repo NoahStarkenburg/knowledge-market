@@ -1,4 +1,4 @@
-using Application.Common;
+﻿using Shared.Kernel;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;

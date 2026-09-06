@@ -1,5 +1,6 @@
-using System.Text;
+﻿using System.Text;
 using Application.Abstractions;
+using Shared.Abstractions;
 
 namespace Api.ContentStorage
 {

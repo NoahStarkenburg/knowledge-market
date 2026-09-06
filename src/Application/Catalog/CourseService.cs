@@ -1,6 +1,7 @@
 ﻿using System.Runtime.InteropServices;
 using Application.Abstractions;
-using Application.Common;
+using Shared.Abstractions;
+using Shared.Kernel;
 using AutoMapper;
 using Domain.Contracts.Catalog;
 using Domain.Catalog;

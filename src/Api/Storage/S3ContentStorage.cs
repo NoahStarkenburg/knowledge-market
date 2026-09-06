@@ -1,6 +1,7 @@
-using Amazon.S3;
+﻿using Amazon.S3;
 using Amazon.S3.Model;
 using Application.Abstractions;
+using Shared.Abstractions;
 using System.Text;
 
 namespace Api.Storage

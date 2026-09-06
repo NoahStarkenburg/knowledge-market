@@ -1,4 +1,4 @@
-namespace Application.Abstractions;
+﻿namespace Shared.Abstractions;
 
 // Distributed cache abstraction. Implemented by the Redis adapter in the web layer, with a
 // no-op fallback so the app runs unchanged when Redis is not configured. Implementations must

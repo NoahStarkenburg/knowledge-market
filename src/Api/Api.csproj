@@ -46,6 +46,8 @@
     <ProjectReference Include="..\Domain.Catalog\Domain.Catalog.csproj" />
     <ProjectReference Include="..\Domain.Orders\Domain.Orders.csproj" />
     <ProjectReference Include="..\Application\Application.csproj" />
+    <ProjectReference Include="..\Shared\Shared.Kernel\Shared.Kernel.csproj" />
+    <ProjectReference Include="..\Shared\Shared.Abstractions\Shared.Abstractions.csproj" />
   </ItemGroup>
 
 

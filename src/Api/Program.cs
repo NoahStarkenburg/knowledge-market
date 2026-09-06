@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using Shared.Abstractions;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.RateLimiting;
@@ -39,7 +40,7 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Serilog.Sinks.OpenTelemetry;
 using Api.Observability;
-using Application.Common;
+using Shared.Kernel;
 using Infrastructure.Cart;
 
 Log.Logger = new LoggerConfiguration()
@@ -177,16 +178,16 @@ if (!string.IsNullOrWhiteSpace(redisConnection))
         options.Configuration = redisConnection;
         options.InstanceName = "km:"; // key prefix, so this app's keys are easy to spot in redis-cli
     });
-    builder.Services.AddSingleton<Application.Abstractions.ICacheStore, Api.Caching.RedisCacheStore>();
+    builder.Services.AddSingleton<Shared.Abstractions.ICacheStore, Api.Caching.RedisCacheStore>();
 }
 else
 {
-    builder.Services.AddSingleton<Application.Abstractions.ICacheStore, Api.Caching.NullCacheStore>();
+    builder.Services.AddSingleton<Shared.Abstractions.ICacheStore, Api.Caching.NullCacheStore>();
 }
 
 // Single-flight coalescer for cache rebuilds. Singleton so its in-flight table is shared across
 // concurrent requests (that sharing is what collapses a stampede into one rebuild).
-builder.Services.AddSingleton<Application.Common.SingleFlight>();
+builder.Services.AddSingleton<Shared.Kernel.SingleFlight>();
 
 // App dependencies
 builder.Services.AddScoped<IAccessService, AccessService>();
@@ -229,14 +230,14 @@ if (storageProvider == "s3")
             : new AmazonS3Client(awsCfg);
     });
 
-    builder.Services.AddScoped<Application.Abstractions.IStorage, S3Storage>();
-    builder.Services.AddSingleton<Application.Abstractions.IContentStorage, S3ContentStorage>();
+    builder.Services.AddScoped<Shared.Abstractions.IStorage, S3Storage>();
+    builder.Services.AddSingleton<Shared.Abstractions.IContentStorage, S3ContentStorage>();
     builder.Services.AddHostedService<S3BucketInitializer>();
 }
 else
 {
-    builder.Services.AddSingleton<Application.Abstractions.IContentStorage, LocalContentStorage>();
-    builder.Services.AddScoped<Application.Abstractions.IStorage, LocalStorage>();
+    builder.Services.AddSingleton<Shared.Abstractions.IContentStorage, LocalContentStorage>();
+    builder.Services.AddScoped<Shared.Abstractions.IStorage, LocalStorage>();
 }
 
 builder.Services.AddScoped<ITokenService, TokenService>();

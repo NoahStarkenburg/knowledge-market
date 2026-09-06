@@ -1,6 +1,6 @@
 ﻿using System.Data.SqlTypes;
 using System.Security.Cryptography.X509Certificates;
-using Domain.Primatives;
+using Shared.Kernel;
 
 namespace Domain.Orders;
 

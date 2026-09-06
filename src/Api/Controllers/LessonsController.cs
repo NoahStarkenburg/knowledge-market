@@ -2,6 +2,7 @@
 using Api.Authorization.Resources;
 using Api.Authorization.Policies;
 using Application.Abstractions;
+using Shared.Abstractions;
 using Application.Content;
 using Application.Uploads;
 using Domain.Contracts.Content;

@@ -52,10 +52,11 @@ try
 var builder = WebApplication.CreateBuilder(args);
 
 // ---------------- Configuration ----------------
-builder.Configuration
-    .AddJsonFile("appsettings.json", optional: true)
-    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true)
-    .AddEnvironmentVariables();
+// CreateBuilder already registers, in precedence order: appsettings.json,
+// appsettings.{Environment}.json, user secrets (Development only), environment
+// variables, command line. Re-adding any of those here would append a second
+// copy, and since later sources win, the empty placeholders in appsettings.json
+// would silently override real values coming from user secrets.
 
 // Fail fast in Production if any critical secret is still a placeholder or is missing.
 ProductionConfigValidator.Validate(builder.Configuration, builder.Environment);

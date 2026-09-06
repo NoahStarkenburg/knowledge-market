@@ -1,9 +1,12 @@
-﻿using Application.Abstractions;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Application.Abstractions;
 using Shared.Abstractions;
 using Infrastructure.Content;
 using Microsoft.EntityFrameworkCore;
 
-namespace Api.Storage
+namespace Infrastructure.Storage
 {
     public sealed class LocalStorage : IStorage
     {

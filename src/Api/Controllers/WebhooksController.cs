@@ -1,4 +1,5 @@
-using Api.Email;
+﻿using Infrastructure.Email;
+using Application.Abstractions;
 using Application.Orders;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

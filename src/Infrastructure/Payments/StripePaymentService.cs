@@ -1,10 +1,12 @@
-﻿using Serilog;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Serilog;
 using Stripe;
 using Domain.Orders;
 using Application.Abstractions;
 using Shared.Kernel;
 
-namespace Api.Payments;
+namespace Infrastructure.Payments;
 
 public sealed class StripePaymentService : IPaymentService
 {

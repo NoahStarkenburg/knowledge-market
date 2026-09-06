@@ -1,7 +1,10 @@
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Amazon.S3;
 using Amazon.S3.Model;
 
-namespace Api.Storage
+namespace Infrastructure.Storage
 {
     public sealed class S3BucketInitializer : IHostedService
     {

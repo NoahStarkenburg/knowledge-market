@@ -1,4 +1,4 @@
-﻿using Api.Payments;
+﻿using Infrastructure.Payments;
 using Shared.Kernel;
 using Microsoft.Extensions.Configuration;
 

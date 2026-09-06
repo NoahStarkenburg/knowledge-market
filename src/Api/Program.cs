@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using Application.Abstractions;
 using Shared.Abstractions;
 using System.Security.Cryptography;
 using System.Text;
@@ -9,12 +10,12 @@ using Api.Authorization.AccessService;
 using Api.Authorization.Handlers;
 using Api.Authorization.Policies;
 using Api.Configuration;
-using Api.ContentStorage;
+using Infrastructure.Storage;
 using Api.DataSeeding;
-using Api.Email;
+using Infrastructure.Email;
 using Api.Endpoints;
-using Api.Payments;
-using Api.Storage;
+using Infrastructure.Payments;
+using Infrastructure.Storage;
 using Infrastructure.Catalog;
 using Infrastructure.Content;
 using Infrastructure.Identity;
@@ -178,11 +179,11 @@ if (!string.IsNullOrWhiteSpace(redisConnection))
         options.Configuration = redisConnection;
         options.InstanceName = "km:"; // key prefix, so this app's keys are easy to spot in redis-cli
     });
-    builder.Services.AddSingleton<Shared.Abstractions.ICacheStore, Api.Caching.RedisCacheStore>();
+    builder.Services.AddSingleton<Shared.Abstractions.ICacheStore, Infrastructure.Caching.RedisCacheStore>();
 }
 else
 {
-    builder.Services.AddSingleton<Shared.Abstractions.ICacheStore, Api.Caching.NullCacheStore>();
+    builder.Services.AddSingleton<Shared.Abstractions.ICacheStore, Infrastructure.Caching.NullCacheStore>();
 }
 
 // Single-flight coalescer for cache rebuilds. Singleton so its in-flight table is shared across
@@ -342,7 +343,7 @@ if (!string.IsNullOrWhiteSpace(redisConn))
 
 if (string.Equals(builder.Configuration["Storage:Provider"], "s3", StringComparison.OrdinalIgnoreCase))
 {
-    healthChecks.AddCheck<Api.Observability.StorageHealthCheck>("storage", tags: ["storage", "ready"]);
+    healthChecks.AddCheck<Infrastructure.Storage.StorageHealthCheck>("storage", tags: ["storage", "ready"]);
 }
 
 // MVC controllers (layered refactor). Registered alongside the minimal APIs so both run

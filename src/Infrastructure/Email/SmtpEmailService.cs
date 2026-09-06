@@ -1,8 +1,11 @@
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using MailKit.Net.Smtp;
 using MailKit.Security;
 using MimeKit;
+using Application.Abstractions;
 
-namespace Api.Email;
+namespace Infrastructure.Email;
 
 public sealed class SmtpEmailService : IEmailService
 {

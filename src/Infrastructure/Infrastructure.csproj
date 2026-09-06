@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
@@ -23,9 +23,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Domain.Cart\Domain.Cart.csproj" />
-    <ProjectReference Include="..\..\Domain.Content\Domain.Content.csproj" />
-    <ProjectReference Include="..\Contracts\Domain.Contracts.csproj" />
+    <ProjectReference Include="..\Domain.Cart\Domain.Cart.csproj" />
+    <ProjectReference Include="..\Domain.Content\Domain.Content.csproj" />
+    <ProjectReference Include="..\Domain.Contracts\Domain.Contracts.csproj" />
     <ProjectReference Include="..\Domain.Identity\Domain.Identity.csproj" />
     <ProjectReference Include="..\Domain.Catalog\Domain.Catalog.csproj" />
     <ProjectReference Include="..\Domain.Orders\Domain.Orders.csproj" />

@@ -160,21 +160,30 @@ cd src/frontend && npm run lint
 ## Project structure
 
 ```
-Domain.Cart/            Cart aggregate
-Domain.Content/         Lesson content
-Domain.Primatives/      Shared base types
-docs/                   Architecture and feature documentation
+docs/                     Architecture and feature documentation
 src/
-  Api/                  HTTP layer: controllers, endpoints, auth, storage providers
-  Application/          Use-case services
-  Contracts/            Request and response DTOs
-  Domain.*/             Per-context domain models
-  Infrastructure/       EF Core persistence
-  frontend/             React SPA
+  Api/                    HTTP layer: controllers, endpoints, auth, storage providers
+  Application/            Use-case services
+  Infrastructure/         EF Core persistence and repositories
+  Domain.Contracts/       Request and response DTOs
+  Domain.Primitives/      Shared value types (Money)
+  Domain.Cart/            Cart aggregate
+  Domain.Catalog/         Courses
+  Domain.Content/         Lessons and lesson assets
+  Domain.Identity/        Users, roles, authentication
+  Domain.Media/           Uploaded media
+  Domain.Orders/          Orders and enrolment
+  Domain.Payments/        Payment records
+  Domain.Search/          Search
+  frontend/               React SPA
 tests/
-  UnitTests/            Domain and service unit tests
-  IntegrationTests/     Full HTTP tests against the API
+  UnitTests/              Domain and service unit tests
+  IntegrationTests/       Full HTTP tests against the API
 ```
+
+Every project lives under `src/`, with tests as a sibling tree. Project folder
+names match their `.csproj` names exactly, so a path always tells you which
+assembly you are looking at.
 
 ## License
 

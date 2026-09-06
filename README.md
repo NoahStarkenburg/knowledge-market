@@ -16,18 +16,6 @@ Built as a .NET 9 REST API with a React 19 single-page frontend.
 | Frontend | React 19, TypeScript, Vite, Tailwind CSS, React Router |
 | Tests | xUnit (backend), Vitest + Testing Library (frontend), Playwright (e2e) |
 
-## Architecture
-
-The backend is a layered ASP.NET Core app organised by bounded context, with
-`Controller -> Service -> Repository` inside each. Domain projects
-(`Domain.Catalog`, `Domain.Identity`, `Domain.Orders`, and so on) hold entities and
-rules; `Application` holds use-case services; `Infrastructure` holds EF Core
-persistence; `Api` holds HTTP concerns only and never touches a `DbContext`.
-
-See [docs/architecture.md](docs/architecture.md) for detail, plus
-[docs/redis-caching.md](docs/redis-caching.md) and
-[docs/google-integration.md](docs/google-integration.md).
-
 ## Running it locally
 
 **Prerequisites:** [.NET 9 SDK](https://dotnet.microsoft.com/download),
@@ -73,7 +61,9 @@ CSRF=$(curl -s -X POST http://localhost:5116/api/auth/login \
   -c cookies.txt | jq -r .csrf)
 
 curl -X POST http://localhost:5116/api/dev/bulk-seed -b cookies.txt -H "X-CSRF: $CSRF"
+```
 
+The API requires a CSRF token on unsafe methods, so seeding needs a login first.
 Generates courses, lessons, and users. Available in Development only.
 
 Sign in with `admin@knowledgemarket.local` / `DevAdmin@LocalOnly!` (from
@@ -157,39 +147,67 @@ rather than running insecurely.
 ## Testing
 
 ```bash
-dotnet test                          # 97 backend tests
-cd src/frontend && npm run test      # 267 frontend tests
+dotnet test                          # 96 backend tests
+cd src/frontend && npm run test      # 265 frontend tests
 cd src/frontend && npm run lint
 ```
+
+## Architecture
+
+Clean Architecture: **dependencies point inward**, toward the domain.
+
+```
+Api  ->  Application  ->  Domain
+              ^
+        Infrastructure
+```
+
+- **Domain.\*** — entities and rules, one project per bounded context. References nothing.
+- **Application** — use cases. Declares what it needs as interfaces (ports) in
+  `Abstractions/`, and knows nothing about EF Core or HTTP.
+- **Infrastructure** — implements those ports: EF Core repositories, and the S3,
+  SMTP, Stripe and Redis adapters.
+- **Api** — HTTP only, plus the composition root that wires ports to adapters.
+- **Shared.Kernel / Shared.Abstractions** — cross-cutting types (`Money`,
+  `PagedResult`) and platform ports (`IStorage`, `ICacheStore`) that belong to no
+  single context.
+
+The inversion is what makes `Application` testable without a database, which is
+why the unit tests run in milliseconds.
+
+There are five bounded contexts — Catalog, Orders, Identity, Content, Cart —
+each with its own `DbContext` and its own SQL schema with a separate migration
+history. Six repositories still join across those schemas, so the contexts are
+not yet independently deployable; breaking those joins is what extracting any of
+them into a service would require. Module-per-project was deliberately not
+adopted: at this size it would be ceremony without payoff.
+
+See [docs/architecture.md](docs/architecture.md) for detail, plus
+[docs/redis-caching.md](docs/redis-caching.md) and
+[docs/google-integration.md](docs/google-integration.md).
 
 ## Project structure
 
 ```
-docs/                     Architecture and feature documentation
+docs/                       Architecture and feature documentation
 src/
-  Api/                    HTTP layer: controllers, endpoints, auth, storage providers
-  Application/            Use-case services
-  Infrastructure/         EF Core persistence and repositories
-  Domain.Contracts/       Request and response DTOs
-  Domain.Primitives/      Shared value types (Money)
-  Domain.Cart/            Cart aggregate
-  Domain.Catalog/         Courses
-  Domain.Content/         Lessons and lesson assets
-  Domain.Identity/        Users, roles, authentication
-  Domain.Media/           Uploaded media
-  Domain.Orders/          Orders and enrolment
-  Domain.Payments/        Payment records
-  Domain.Search/          Search
-  frontend/               React SPA
+  Api/                      HTTP: controllers, auth endpoints, composition root
+  Application/              Use cases and the ports they depend on
+  Infrastructure/           EF Core, plus S3 / SMTP / Stripe / Redis adapters
+  Domain.Cart/              Cart aggregate
+  Domain.Catalog/           Courses and reviews
+  Domain.Content/           Lessons and lesson assets
+  Domain.Identity/          Users, roles, authentication
+  Domain.Orders/            Orders, subscriptions, enrolment
+  Domain.Contracts/         Request and response DTOs
+  Shared/
+    Shared.Kernel/          Money, PagedResult, exceptions, diagnostics
+    Shared.Abstractions/    IStorage, IContentStorage, ICacheStore
+  frontend/                 React SPA
 tests/
-  UnitTests/              Domain and service unit tests
-  IntegrationTests/       Full HTTP tests against the API
+  UnitTests/                Domain and service unit tests
+  IntegrationTests/         Full HTTP tests against a real SQL Server container
 ```
-
-Every project lives under `src/`, with tests as a sibling tree. Project folder
-names match their `.csproj` names exactly, so a path always tells you which
-assembly you are looking at.
-
 ## License
 
 [MIT](LICENSE)

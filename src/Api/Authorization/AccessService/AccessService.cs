@@ -79,16 +79,4 @@ public sealed class AccessService(
         return hasActiveSubscription;
     }
 
-    // Optional overload if you don't pass ownerId in LessonShell/CourseShell
-    private async Task<bool> HasPaidAccess(Guid userId, Guid courseId, CancellationToken ct)
-    {
-        var course = await catalogDb.Courses.AsNoTracking()
-            .Select(c => new { c.Id, c.CreatedById })
-            .SingleOrDefaultAsync(c => c.Id == courseId, ct);
-
-        if (course is null) return false;
-        if (course.CreatedById == userId) return true; // owner
-
-        return await HasPaidAccess(userId, courseId, course.CreatedById, ct);
-    }
 }

@@ -18,6 +18,7 @@ public class CourseRulesTests
         Assert.Null(course.PublishedAt);
         Assert.Equal("Intro to Testing", course.Title.Value);
         Assert.Equal(49.99m, course.Price.Amount);
+        Assert.Fail();
     }
 
     [Fact]

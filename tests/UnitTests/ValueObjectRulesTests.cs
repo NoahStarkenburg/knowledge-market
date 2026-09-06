@@ -1,6 +1,6 @@
-using Domain.Catalog;
+﻿using Domain.Catalog;
 using Domain.Identity;
-using Domain.Primatives;
+using Shared.Kernel;
 
 namespace UnitTests;
 

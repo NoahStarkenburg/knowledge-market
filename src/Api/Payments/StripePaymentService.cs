@@ -1,8 +1,8 @@
-using Serilog;
+﻿using Serilog;
 using Stripe;
 using Domain.Orders;
 using Application.Abstractions;
-using Application.Common;
+using Shared.Kernel;
 
 namespace Api.Payments;
 

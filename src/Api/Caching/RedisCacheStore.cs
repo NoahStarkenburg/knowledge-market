@@ -1,6 +1,7 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Application.Abstractions;
-using Application.Common;
+using Shared.Abstractions;
+using Shared.Kernel;
 using Microsoft.Extensions.Caching.Distributed;
 
 namespace Api.Caching;

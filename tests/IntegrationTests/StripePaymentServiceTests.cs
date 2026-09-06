@@ -1,5 +1,5 @@
-using Api.Payments;
-using Application.Common;
+﻿using Api.Payments;
+using Shared.Kernel;
 using Microsoft.Extensions.Configuration;
 
 namespace IntegrationTests;

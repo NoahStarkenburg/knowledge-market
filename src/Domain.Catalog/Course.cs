@@ -1,5 +1,5 @@
 ﻿using System.Data.SqlTypes;
-using Domain.Primatives;
+using Shared.Kernel;
 
 namespace Domain.Catalog;
 

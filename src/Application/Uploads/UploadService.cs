@@ -1,6 +1,7 @@
-using Application.Abstractions;
+﻿using Application.Abstractions;
+using Shared.Abstractions;
 using Application.Catalog;
-using Application.Common;
+using Shared.Kernel;
 using Application.Content;
 
 namespace Application.Uploads;

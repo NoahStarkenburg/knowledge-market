@@ -1,5 +1,5 @@
 ﻿using Application.Abstractions;
-using Application.Common;
+using Shared.Kernel;
 using AutoMapper;
 using Domain.Contracts.Identity;
 using Domain.Identity;

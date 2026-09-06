@@ -1,6 +1,6 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 
-namespace Application.Common;
+namespace Shared.Kernel;
 
 // Custom spans for the operations that matter to the business but that no automatic
 // instrumentation can see: a purchase, a checkout, a cache lookup, a coalesced call.

@@ -154,7 +154,7 @@ namespace Infrastructure.Migrations.CatalogDb
                                 .HasForeignKey("CourseId");
                         });
 
-                    b.OwnsOne("Domain.Primatives.Money", "Price", b1 =>
+                    b.OwnsOne("Shared.Kernel.Money", "Price", b1 =>
                         {
                             b1.Property<Guid>("CourseId")
                                 .HasColumnType("uniqueidentifier");

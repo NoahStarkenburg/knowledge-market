@@ -1,5 +1,6 @@
 ﻿using Api.Authorization;
 using Application.Abstractions;
+using Shared.Abstractions;
 using Application.Uploads;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

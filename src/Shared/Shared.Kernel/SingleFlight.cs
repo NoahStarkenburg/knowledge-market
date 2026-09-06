@@ -1,6 +1,6 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 
-namespace Application.Common;
+namespace Shared.Kernel;
 
 // In-process request coalescing ("single flight"). Concurrent callers asking for the same key share
 // ONE execution of the factory instead of each running it. Placed in front of a cache-aside reload,

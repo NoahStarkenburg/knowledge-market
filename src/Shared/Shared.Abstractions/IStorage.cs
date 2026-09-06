@@ -1,4 +1,4 @@
-namespace Application.Abstractions;
+﻿namespace Shared.Abstractions;
 
 public sealed record FileMeta(string Mime, long Size, string FileName, DateTimeOffset LastModifiedUtc);
 

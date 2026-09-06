@@ -1,5 +1,5 @@
 ﻿using Application.Catalog;
-using Application.Common;
+using Shared.Kernel;
 using Domain.Contracts.Catalog;
 using Domain.Catalog;
 

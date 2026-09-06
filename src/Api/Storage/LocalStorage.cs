@@ -1,4 +1,5 @@
 ﻿using Application.Abstractions;
+using Shared.Abstractions;
 using Infrastructure.Content;
 using Microsoft.EntityFrameworkCore;
 

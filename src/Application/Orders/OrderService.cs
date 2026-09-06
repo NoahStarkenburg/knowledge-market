@@ -1,5 +1,5 @@
-using Application.Abstractions;
-using Application.Common;
+﻿using Application.Abstractions;
+using Shared.Kernel;
 using AutoMapper;
 using Domain.Contracts.Orders;
 using Domain.Orders;

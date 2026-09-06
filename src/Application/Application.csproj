@@ -22,7 +22,8 @@
     <ProjectReference Include="..\Domain.Orders\Domain.Orders.csproj" />
     <ProjectReference Include="..\Domain.Cart\Domain.Cart.csproj" />
     <ProjectReference Include="..\Domain.Content\Domain.Content.csproj" />
-    <ProjectReference Include="..\Domain.Primitives\Domain.Primitives.csproj" />
+    <ProjectReference Include="..\Shared\Shared.Kernel\Shared.Kernel.csproj" />
+    <ProjectReference Include="..\Shared\Shared.Abstractions\Shared.Abstractions.csproj" />
   </ItemGroup>
 
 </Project>

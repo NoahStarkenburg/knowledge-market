@@ -164,7 +164,7 @@ namespace Infrastructure.Migrations.OrdersDb
 
             modelBuilder.Entity("Domain.Orders.Order", b =>
                 {
-                    b.OwnsOne("Domain.Primatives.Money", "Price", b1 =>
+                    b.OwnsOne("Shared.Kernel.Money", "Price", b1 =>
                         {
                             b1.Property<Guid>("OrderId")
                                 .HasColumnType("uniqueidentifier");

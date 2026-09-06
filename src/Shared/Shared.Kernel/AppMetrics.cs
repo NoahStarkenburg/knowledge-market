@@ -1,6 +1,6 @@
-using System.Diagnostics.Metrics;
+﻿using System.Diagnostics.Metrics;
 
-namespace Application.Common;
+namespace Shared.Kernel;
 
 // Business metrics, on top of the automatic HTTP/runtime ones. They live on the
 // "KnowledgeMarket" meter, which the API registers with OpenTelemetry so they export

@@ -1,4 +1,4 @@
-using Contracts.Catalog;
+﻿using Domain.Contracts.Catalog;
 
 namespace Application.Catalog;
 

@@ -1,9 +1,9 @@
-using System.Linq.Expressions;
+﻿using System.Linq.Expressions;
 using System.Text.Json;
 using Application.Abstractions;
 using Application.Catalog;
 using Application.Common;
-using Contracts.Catalog;
+using Domain.Contracts.Catalog;
 using Dapper;
 using Domain.Catalog;
 using Domain.Orders;

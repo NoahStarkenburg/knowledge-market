@@ -2,7 +2,7 @@
 using Infrastructure.Identity;
 using Microsoft.EntityFrameworkCore;
 
-namespace Api.Auth
+namespace Api.Authorization
 {
     public sealed class JwtCurrentUser : ICurrentUser
     {

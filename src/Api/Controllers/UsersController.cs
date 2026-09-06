@@ -1,8 +1,8 @@
-using Api.Auth;
+﻿using Api.Authorization;
 using Api.Email;
 using Application.Catalog;
 using Application.Users;
-using Contracts.Identity;
+using Domain.Contracts.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

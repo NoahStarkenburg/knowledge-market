@@ -1,5 +1,5 @@
-using System.Text.RegularExpressions;
-using Contracts.Identity;
+﻿using System.Text.RegularExpressions;
+using Domain.Contracts.Identity;
 using FluentValidation;
 
 namespace Application.Users;

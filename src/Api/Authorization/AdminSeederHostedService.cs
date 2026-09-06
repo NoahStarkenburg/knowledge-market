@@ -1,11 +1,11 @@
-// FILE: src/Api/Auth/AdminSeederHostedService.cs
+﻿// FILE: src/Api/Auth/AdminSeederHostedService.cs
 
 using Domain.Identity;
 using Infrastructure.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 
-namespace Api.Auth;
+namespace Api.Authorization;
 
 public sealed class AdminSeederHostedService(
     IServiceProvider services,

@@ -1,8 +1,8 @@
-using Api.Auth;
-using Api.Auth.Resources;
+﻿using Api.Authorization;
+using Api.Authorization.Resources;
 using Api.Authorization.Policies;
 using Application.Catalog;
-using Contracts.Catalog;
+using Domain.Contracts.Catalog;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;

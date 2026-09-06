@@ -1,4 +1,4 @@
-namespace Api.Auth;
+﻿namespace Api.Authorization;
 
 public static class CookieHelpers
 {

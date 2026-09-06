@@ -1,4 +1,4 @@
-namespace Contracts.Catalog;
+﻿namespace Domain.Contracts.Catalog;
 
 public sealed record ReviewDto(
     Guid Id,

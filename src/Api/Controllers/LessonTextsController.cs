@@ -1,6 +1,6 @@
-using Api.Auth;
-using Api.Auth.AccessService;
-using Api.Auth.Resources;
+﻿using Api.Authorization;
+using Api.Authorization.AccessService;
+using Api.Authorization.Resources;
 using Application.Content;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

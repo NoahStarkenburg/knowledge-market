@@ -1,5 +1,5 @@
-using Application.Common;
-using Contracts.Identity;
+﻿using Application.Common;
+using Domain.Contracts.Identity;
 
 namespace Application.Users;
 

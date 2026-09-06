@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
@@ -23,7 +23,7 @@
     <ProjectReference Include="..\..\src\Domain.Identity\Domain.Identity.csproj" />
     <ProjectReference Include="..\..\src\Domain.Catalog\Domain.Catalog.csproj" />
     <ProjectReference Include="..\..\src\Domain.Orders\Domain.Orders.csproj" />
-    <ProjectReference Include="..\..\Domain.Primatives\Domain.Primitives.csproj" />
+    <ProjectReference Include="..\..\src\Domain.Primitives\Domain.Primitives.csproj" />
   </ItemGroup>
 
 </Project>

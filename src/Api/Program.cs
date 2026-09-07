@@ -692,7 +692,7 @@ app.Use(async (ctx, next) =>
 
             if (string.IsNullOrWhiteSpace(csrfCookie) ||
                 string.IsNullOrWhiteSpace(csrfHeader) ||
-                csrfCookie != csrfHeader)
+                !CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(csrfCookie), Encoding.UTF8.GetBytes(csrfHeader)))
             {
                 ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
                 await ctx.Response.WriteAsJsonAsync(new { message = "CSRF validation failed" });

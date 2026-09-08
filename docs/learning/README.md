@@ -24,7 +24,7 @@ They are written to be read before doing the work, then kept as a reference.
 | 2 | Secrets: user-secrets, `.env.example`, scanning | Done |
 | 3 | Local development: Docker Compose for dependencies | Done |
 | 4 | Git workflow: branches, pull requests, review | Done |
-| 5 | [Containerizing the application](05-containers.md) | Done |
+| 5 | [Containers](05-containers.md) + [Serving a SPA](05a-serving-a-spa.md) | In progress |
 | 6 | [Continuous integration](06-ci.md) | Done |
 | 7 | [Testing in depth](07-testing.md) | In progress |
 | 8 | Observability: logs, traces, metrics | Not started |

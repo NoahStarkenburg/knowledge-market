@@ -30,6 +30,9 @@ They are written to be read before doing the work, then kept as a reference.
 | 8 | Observability: logs, traces, metrics | Not started |
 | 9 | Deployment | Not started |
 
+See [deployment-roadmap.md](../deployment-roadmap.md) for where all of this is
+headed: local Compose, then Azure Container Apps, then a managed edge, then AKS.
+
 Guides are written when the phase is reached, so unlinked rows have no document yet.
 
 Phases 6 and 7 are out of numerical order because CI was built first, then used

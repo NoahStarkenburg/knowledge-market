@@ -45,7 +45,11 @@ import type {
   SearchCoursesParams,
 } from "./types";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5116";
+// Empty on purpose: every request is relative, so it resolves against whatever
+// origin served the page. The Vite dev proxy, nginx in containers and the edge
+// in production all route /api to the backend, so there is nothing to configure
+// and no way for an environment to be pointed at the wrong API.
+const API_BASE_URL = "";
 
 // Read the CSRF token from the readable cookie the server sets on login.
 function getCsrfToken(): string {

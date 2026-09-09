@@ -14,12 +14,20 @@ code to be reproduced here.
 
 ### What exists today
 
-| File | Lines | What it is |
+| File | What it is | Status |
 |---|---|---|
-| `docker-compose.yml` | 48 | Starts **SQL Server** for local development. Does not touch the app. |
-| `src/Api/Dockerfile` | 133 | The recipe that packages the **API** into a runnable image. |
-| `.dockerignore` | 76 | Filters what gets sent to Docker when building the API image. |
-| `src/frontend/.dockerignore` | 0 | An empty file committed by accident. To be deleted. |
+| `docker-compose.yml` | Starts **SQL Server** for local development | merged |
+| `src/Api/Dockerfile` | Packages the **API** into an image | merged, PR #16 |
+| `.dockerignore` | Filters the context for the API build (context = repo root) | merged, PR #16 |
+| `src/frontend/Dockerfile` | Packages the **SPA** — node builds, nginx serves | PR #21 |
+| `src/frontend/nginx.conf` | Routing, caching and proxying for the SPA container | PR #21 |
+| `src/frontend/.dockerignore` | Filters the context for the web build (context = `src/frontend`) | PR #21 |
+
+Note the two different build contexts. The API needs the repository root
+because `Api.csproj` references ten sibling projects. The frontend needs
+nothing outside its own folder, so its context is `src/frontend` and its `COPY`
+paths are shorter. **Pick the smallest directory containing everything the
+build needs.**
 
 Two of those solve completely different problems, and confusing them is the
 single most common source of confusion when learning Docker:
@@ -596,6 +604,158 @@ docker compose down -v      # stop and DELETE volumes
 
 ---
 
+## Part 7b — How containers find each other, and how to isolate them
+
+### The network and its DNS
+
+`docker compose up` creates a private network and puts every service on it:
+
+```
+network: knowledge-market_default
+
+   web    172.18.0.4
+   api    172.18.0.3
+   mssql  172.18.0.2
+```
+
+Docker also runs a **DNS server inside every container on that network**, always
+at `127.0.0.11`, mapping **service names** to current IPs. The names come
+straight from the compose file: write `api:` as a service and `api` becomes a
+hostname.
+
+You have already been using this without noticing. The connection string says
+`Server=mssql,1433` — `mssql` is not a hostname anyone configured, it is the
+service name, resolved by Docker's DNS.
+
+From your **host**, those names do not resolve. You reach a container only
+through a published port, as `localhost`. Two different addresses for the same
+database depending on where you are asking from.
+
+### Container IPs are not stable — and that is the whole point
+
+```
+docker compose up -d                        api = 172.18.0.3
+docker compose up -d --force-recreate api   api = 172.18.0.5
+```
+
+Docker updates DNS immediately. **The name is stable; the IP is not.** Anything
+that caches an IP eventually points at a container that no longer exists.
+
+This is exactly why `nginx.conf` holds the upstream in a variable:
+
+```nginx
+# literal — nginx resolves ONCE at config load and caches for the process life
+proxy_pass http://api:8080;
+   → nginx refuses to start if api is not up:  "host not found in upstream"
+   → api restarts with a new IP → every request 502s until nginx restarts
+
+# variable + resolver — DNS is consulted at request time, cached for 10s
+resolver 127.0.0.11 valid=10s ipv6=off;
+set $api_upstream "api:8080";
+proxy_pass http://$api_upstream;
+```
+
+The second failure mode is the dangerous one: the API is healthy, and the bug
+lives in a container nobody is looking at. In Kubernetes, where pods are
+rescheduled constantly, it is a classic outage.
+
+There is also an availability argument. nginx serves the SPA from its own disk
+and does not need the API to do it. With the literal form, an API outage takes
+the whole site down because nginx will not boot. With the resolver, the site
+loads and only `/api` calls fail — users see your UI with an error instead of a
+connection refused. **Keep failure domains separate.**
+
+What the variable costs you: no `upstream {}` block, so no load balancing across
+replicas, no active health checks, no connection keepalive. With one API
+container there is nothing to balance, so it is the better trade.
+
+### Blocking access from outside: publish nothing
+
+```yaml
+web:
+  ports: ["8080:8080"]   # reachable from your machine
+api:
+  # no ports key         # NOT reachable from outside. At all.
+mssql:
+  # no ports key         # same
+```
+
+`ports:` is the only thing that opens a route from your host into the container
+network. Without it there is no path — not curl, not a browser, nothing on your
+LAN. It is not a firewall rule that could be misconfigured; the mapping does not
+exist. (`expose:` is documentation only and publishes nothing.)
+
+### Restricting container to container: several networks
+
+By default compose puts everything on **one flat network where everything can
+reach everything.** `web` has no business talking to the database.
+
+```yaml
+networks:
+  edge:
+  data:
+
+services:
+  web:
+    networks: [edge]
+    ports: ["8080:8080"]
+  api:
+    networks: [edge, data]     # on both — it is the bridge
+  mssql:
+    networks: [data]
+```
+
+```
+     edge                data
+web ◄────► api ◄────────► mssql
+web ✗ mssql   — no shared network
+```
+
+The classic three tiers: public, application, data. Each service reaches only
+its neighbour.
+
+**The test that proves it:** from inside `web`, `nslookup mssql` fails. Docker's
+DNS only answers for services sharing a network with you, so the database is not
+merely firewalled — as far as `web` is concerned it does not exist.
+
+### The same idea in Kubernetes
+
+Every pod can reach every pod by default. `NetworkPolicy` narrows it:
+
+```yaml
+kind: NetworkPolicy
+spec:
+  podSelector:
+    matchLabels: { app: mssql }
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: { app: api }
+      ports:
+        - port: 1433
+```
+
+Selection is by **label**, not IP, because pod IPs change constantly.
+
+**The gotcha:** NetworkPolicy is enforced by the CNI plugin. If the cluster's CNI
+does not support it, the policy is **silently ignored** — no error, and
+`kubectl get networkpolicy` happily shows it doing nothing. On AKS that means
+Azure CNI or Calico. Always verify that a blocked connection actually fails.
+
+### The principle
+
+> **Network isolation is a layer, not the answer.**
+
+"It is on the internal network so it is safe" is the assumption behind a great
+many breaches that started small. Concretely here:
+
+- the API is unreachable from outside, **and**
+- SQL Server still requires credentials, **and**
+- the API still requires a valid auth cookie
+
+Each layer assumes the one outside it has already failed. That is why the CSRF
+token stays even after `SameSite=Lax` arrives.
+
 ## Part 8 — Where the frontend fits
 
 ### Your frontend is three files
@@ -683,20 +843,66 @@ infinitely cacheable.
 
 ## Part 10 — The plan
 
-1. **`feature/serve-spa-from-api`** — add a Node build stage to
-   `src/Api/Dockerfile` and copy `dist/` into `wwwroot/`. One image, three
-   stages, two toolchains. Also deletes the stray empty
-   `src/frontend/.dockerignore`.
-2. **`feature/runtime-config-endpoint`** — `GET /api/config` serving the Stripe
-   publishable key and feature flags, so the bundle stops being
-   environment-specific.
-3. **`fix/same-origin-cookies`** — `SameSite=Lax` everywhere and delete the CORS
-   policy. Requires a `server.proxy` entry in `vite.config.ts` first, so local
-   development is single-origin too and matches production.
-4. **CI builds the image on every pull request**, so it cannot silently rot the
-   way it did between PRs #10 and #16.
+The architecture we settled on is **two images behind one origin**: nginx serves
+the SPA and forwards `/api/*` to the API container. Not the API serving the SPA
+from `wwwroot` — that was the earlier plan, changed once running it locally made
+cost irrelevant. See [deployment-roadmap.md](../deployment-roadmap.md).
+
+| # | Branch | What | State |
+|---|---|---|---|
+| 20 | `feature/vite-dev-proxy` | Vite forwards `/api` to :5116; `apiClient` uses relative URLs | open |
+| 21 | `feature/containerize-frontend` | frontend Dockerfile + `nginx.conf` | open |
+| 22 | `feature/compose-full-stack` | compose wires web + api + mssql, ports closed on the last two | next |
+| 23 | `feature/runtime-config-endpoint` | `GET /api/config` so the bundle stops being environment-specific | |
+| 24 | `fix/same-origin-cookies` | `SameSite=Lax`, delete the CORS policy | |
+| — | CI builds both images on every PR | so they cannot rot the way the API one did between #10 and #16 | |
 
 ---
+
+## Part 11 — Two bugs this build actually surfaced
+
+Both were found by building and running the thing, not by reading it. Worth
+recording because they are representative.
+
+### Bug 1 — the bundle had the API's address compiled into it
+
+Building the frontend image produced a bundle containing `http://localhost:5116`
+as a literal string. In a deployed browser, `localhost` is the **user's own
+machine**, so every API call would fail with connection refused.
+
+Cause: `apiClient.ts` read `import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5116"`.
+The image build correctly has no `.env.local`, so the fallback won.
+
+Fix: `const API_BASE_URL = ""`. Relative URLs resolve against whichever origin
+served the page, so the bundle stops caring where it is deployed.
+
+The check that caught it, and the habit worth keeping:
+
+```bash
+docker run --rm <image> sh -c 'grep -c "localhost:5116" /usr/share/nginx/html/assets/*.js'
+```
+
+**When a build-time substitution matters, grep the output for it.** You cannot
+reason about what a bundler baked in; you can look.
+
+### Bug 2 — nginx refused to start
+
+```
+[emerg] host not found in upstream "api" in /etc/nginx/conf.d/default.conf:51
+```
+
+Cause and fix are in Part 7b. The general shape is worth naming: **a name
+resolved once at startup is a name that will eventually be wrong.**
+
+### The lesson under both
+
+Neither would have been caught by reading the file, by the compiler, or by any
+test in the suite. Both took under a minute to find by building the image and
+running it.
+
+A Dockerfile that nothing executes rots silently — which is exactly how
+`src/Api/Dockerfile` ended up referencing four deleted projects between PRs #10
+and #16. **The fix is to run it in CI**, so it is exercised on every change.
 
 ## Command reference
 
@@ -755,3 +961,13 @@ docker container prune -f      # stopped containers
 10. Why is the SQL Server password safe to commit but `Jwt:SigningKey` is not?
 11. Why does a Node stage exist in a Dockerfile that ships no Node?
 12. What does `--target` do, and why is it not a way to ship a second container?
+13. How does the nginx container find the API container? What does it look up,
+    and what would break if it cached the answer?
+14. `web`, `api` and `mssql` are on one network. How do you stop `web` reaching
+    `mssql`, and how would you prove it worked?
+15. Why does the API container publish no port, and what does that stop that a
+    firewall rule would not?
+16. A bundle was built with `localhost:5116` compiled into it. Why is that
+    catastrophic in production, and what one-line change fixes it?
+17. In Kubernetes you apply a NetworkPolicy and it appears to do nothing. What
+    is the most likely reason?

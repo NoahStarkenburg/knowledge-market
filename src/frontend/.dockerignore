@@ -1,0 +1,56 @@
+# What NOT to send to Docker when building the frontend image.
+#
+# The build context is this folder, and `docker build` uploads all of it to the
+# Docker daemon before the first instruction runs. Without this file that is
+# 227MB and 15,481 files, to compile about 990KB of actual input.
+#
+# Speed is the least important reason. The other two matter more.
+
+# ---------------------------------------------------------------------------
+# node_modules — excluded for CORRECTNESS, not size
+# ---------------------------------------------------------------------------
+# It holds compiled binaries for the platform it was installed on:
+#     @rollup/rollup-win32-x64-msvc
+#     @esbuild/win32-x64
+# The image is Linux. Copying Windows binaries in makes the build fail with
+# "Cannot find module @rollup/rollup-linux-x64-gnu", which reads like a broken
+# dependency and is actually a Dockerfile mistake.
+#
+# The image runs `npm ci` itself, from package-lock.json, so it installs the
+# correct Linux binaries. Never ship build artifacts into an image; regenerate
+# them there.
+node_modules/
+
+# ---------------------------------------------------------------------------
+# Build output — rebuilt inside the image
+# ---------------------------------------------------------------------------
+# Your local dist/ is whatever you last built by hand, with whatever env vars
+# happened to be set. The image builds its own. Excluding it makes that
+# impossible to get wrong.
+dist/
+*.tsbuildinfo
+
+# ---------------------------------------------------------------------------
+# Secrets — a file copied into a layer stays in that layer forever
+# ---------------------------------------------------------------------------
+# Deleting it in a later instruction only hides it; `docker history` still has
+# it. Keep it out of the context in the first place.
+.env
+.env.local
+.env.*.local
+
+# ---------------------------------------------------------------------------
+# Not needed to build the bundle
+# ---------------------------------------------------------------------------
+# Playwright specs run in CI against a live app, never during an image build.
+e2e/
+playwright.config.ts
+test-results/
+playwright-report/
+coverage/
+
+# Excluded so that editing a note does not invalidate the COPY layer and force
+# a full rebuild.
+*.md
+Dockerfile
+.dockerignore

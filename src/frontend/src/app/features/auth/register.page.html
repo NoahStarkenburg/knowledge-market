@@ -1,0 +1,47 @@
+    <div class="min-h-screen bg-paper bg-grid flex flex-col items-center justify-center px-4 py-12">
+      <a routerLink="/" class="flex items-center gap-2.5 mb-8">
+        <app-ornament [size]="20" class="text-cobalt" />
+        <span class="font-display font-extrabold uppercase tracking-[-0.01em] text-[20px] leading-none">
+          <span class="text-ink">Knowledge</span><span class="text-cobalt">Market</span>
+        </span>
+      </a>
+
+      <div class="panel shadow-hard p-8 w-full max-w-md">
+        <p class="t-eyebrow text-cobalt mb-3">Create account</p>
+        <h1 class="font-display font-extrabold uppercase tracking-[-0.02em] leading-[0.95] text-[clamp(1.9rem,5vw,2.5rem)] text-ink mb-3">Create your account</h1>
+        <p class="text-[14px] leading-[1.6] text-ink-soft mb-7">Join thousands of learners and creators today.</p>
+
+        <form (ngSubmit)="submit()">
+          <app-form-error-list [error]="error()" />
+          <app-field label="Email">
+            <input appInput type="email" required autocomplete="email" name="email"
+                   [ngModel]="email()" (ngModelChange)="email.set($event)" [ngModelOptions]="{ standalone: true }" />
+          </app-field>
+          <app-field label="Password">
+            <input appInput type="password" required autocomplete="new-password" name="password"
+                   [ngModel]="password()" (ngModelChange)="password.set($event)" [ngModelOptions]="{ standalone: true }" />
+          </app-field>
+          <app-field label="Confirm password">
+            <input appInput type="password" required autocomplete="new-password" name="confirm"
+                   [ngModel]="confirmPassword()" (ngModelChange)="confirmPassword.set($event)" [ngModelOptions]="{ standalone: true }" />
+          </app-field>
+          <button appButton type="submit" size="lg" class="w-full" [disabled]="loading()">
+            {{ loading() ? 'Creating account...' : 'Create account' }}
+          </button>
+          <p class="text-[12px] text-ink-mute mt-4 text-center leading-relaxed">
+            By creating an account, you agree to our
+            <a routerLink="/terms" class="text-cobalt hover:text-ink underline underline-offset-2 decoration-2">Terms of Service</a>
+            and
+            <a routerLink="/privacy" class="text-cobalt hover:text-ink underline underline-offset-2 decoration-2">Privacy Policy</a>.
+          </p>
+        </form>
+
+        <app-google-sign-in-button />
+
+        <p class="text-[13px] text-ink-soft mt-6 text-center">
+          Already have an account?
+          <a routerLink="/login" class="font-semibold text-cobalt hover:text-ink underline underline-offset-2 decoration-2">Sign in</a>
+        </p>
+      </div>
+    </div>
+  

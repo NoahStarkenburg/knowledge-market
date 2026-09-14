@@ -1,0 +1,132 @@
+    <div class="min-h-screen bg-paper">
+      <div class="max-w-4xl mx-auto px-5 sm:px-6 py-10">
+        <a [routerLink]="['/courses', courseId()]" class="inline-flex items-center gap-1.5 t-label text-ink-mute hover:text-ink transition-colors mb-6">
+          <lucide-icon [img]="chevronLeft" class="w-4 h-4" />Back to course
+        </a>
+        @if (courseDetail(); as cd) { <div class="t-eyebrow text-cobalt mb-3">{{ cd.title }}</div> }
+        <h1 class="font-display display-x font-extrabold uppercase leading-[0.9] tracking-[-0.03em] text-ink text-[clamp(2.25rem,6vw,3.5rem)] mb-8">Lessons</h1>
+
+        <app-form-error-list [error]="error()" />
+        @if (reorderError()) { <div class="mb-4"><app-form-error-list [error]="reorderError()" /></div> }
+
+        @if (!loading() && isOwner() === false) {
+          <div class="panel px-5 py-3 text-[13px] text-ink-soft mb-5">Click a lesson to preview its contents. Some lessons require course access.</div>
+        }
+
+        @if (isOwner()) {
+          <div class="panel mb-5">
+            <div class="panel-hd"><h2 class="t-heading text-ink">New lesson</h2></div>
+            <div class="p-6">
+              <app-form-error-list [error]="createError()" />
+              <form (ngSubmit)="createLesson()" class="space-y-4">
+                <label class="flex flex-col gap-2">
+                  <span class="t-label text-ink">Title</span>
+                  <input class="input-field" [ngModel]="title()" (ngModelChange)="title.set($event)" [ngModelOptions]="{ standalone: true }" placeholder="e.g. Introduction to the course" required name="t" />
+                </label>
+                <label class="flex flex-col gap-2">
+                  <span class="t-label text-ink">Body / intro text</span>
+                  <textarea class="input-field min-h-[80px] resize-y" placeholder="Optional intro text shown at the top of the lesson..." [ngModel]="body()" (ngModelChange)="body.set($event)" [ngModelOptions]="{ standalone: true }" name="b"></textarea>
+                </label>
+                <div class="flex items-center justify-between gap-4 flex-wrap">
+                  <label class="inline-flex items-center gap-2.5 text-[13px] cursor-pointer">
+                    <input type="checkbox" [ngModel]="isFreePreview()" (ngModelChange)="isFreePreview.set($event)" [ngModelOptions]="{ standalone: true }" name="fp" class="w-4 h-4 accent-cobalt" />
+                    <span class="text-ink font-semibold">Free preview</span>
+                    <span class="t-micro text-ink-mute">Visible without purchase</span>
+                  </label>
+                  <button appButton type="submit" [disabled]="createLoading()">{{ createLoading() ? 'Creating...' : 'Create lesson' }}</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        }
+
+        <div class="panel">
+          <div class="panel-hd flex items-center justify-between">
+            <h2 class="t-heading text-ink">{{ lessons().length }} lesson{{ lessons().length !== 1 ? 's' : '' }}</h2>
+            @if (isOwner() && lessons().length > 1) { <p class="t-label text-ink-mute">Drag to reorder</p> }
+          </div>
+
+          @if (loading()) {
+            <div class="p-8 flex justify-center"><app-loading-spinner /></div>
+          } @else if (lessons().length === 0) {
+            <div class="px-6 py-10 text-center">
+              <p class="text-ink-mute text-[14px]">No lessons yet.</p>
+              @if (isOwner()) { <p class="text-[13px] text-ink-mute mt-1">Use the form above to add your first lesson.</p> }
+            </div>
+          } @else {
+            <ul class="divide-y-2 divide-ink/10">
+              @for (l of lessons(); track l.id; let idx = $index) {
+                <li [draggable]="!!isOwner()" (dragstart)="draggedId.set(l.id)" (dragover)="onDragOver($event, l.id)" (dragleave)="dragOverId.set(null)" (drop)="onDrop($event, l.id)"
+                    class="transition-colors" [class]="liClasses(l.id)">
+                  <div class="px-4 py-3.5 flex items-center gap-3">
+                    @if (isOwner()) { <lucide-icon [img]="grip" class="w-4 h-4 text-ink-mute cursor-grab select-none shrink-0" /> }
+                    <span class="text-ink-mute text-[12px] w-6 text-right shrink-0 font-mono tabular-nums">{{ (idx + 1).toString().padStart(2, '0') }}</span>
+                    <button (click)="toggle(l)" class="text-ink-mute hover:text-ink transition-colors shrink-0" [attr.aria-label]="state(l.id)?.expanded ? 'Collapse' : 'Expand'">
+                      @if (state(l.id)?.expanded) { <lucide-icon [img]="chevronDown" class="w-4 h-4" /> } @else { <lucide-icon [img]="chevronRight" class="w-4 h-4" /> }
+                    </button>
+                    @if (l.isFreePreview || isOwner() || isEnrolled()) { <lucide-icon [img]="play" class="w-4 h-4 text-cobalt shrink-0" /> } @else { <lucide-icon [img]="lock" class="w-4 h-4 text-ink-mute shrink-0" /> }
+                    <div class="flex-1 min-w-0">
+                      <div class="font-semibold text-ink text-[14px]">{{ l.title }}</div>
+                      <div class="t-micro text-ink-mute mt-0.5">{{ l.isFreePreview ? 'Free preview' : (isOwner() ? 'Members only' : (isEnrolled() ? 'Enrolled' : 'Locked')) }}</div>
+                    </div>
+                    @if (isOwner()) {
+                      <div class="flex items-center gap-2 shrink-0">
+                        <a [routerLink]="['/courses', courseId(), 'lessons', l.id, 'manage']"><button appButton variant="secondary" size="sm">Manage</button></a>
+                        @if (confirmDeleteId() === l.id) {
+                          <button appButton variant="danger" size="sm" (click)="deleteLesson(l.id)" [disabled]="deleteLoading()">{{ deleteLoading() ? '...' : 'Confirm' }}</button>
+                          <button appButton variant="secondary" size="sm" (click)="confirmDeleteId.set(null)" [disabled]="deleteLoading()">Cancel</button>
+                        } @else {
+                          <button appButton variant="secondary" size="sm" aria-label="Delete" (click)="confirmDeleteId.set(l.id)"><lucide-icon [img]="trash" class="w-3.5 h-3.5" /></button>
+                        }
+                      </div>
+                    }
+                  </div>
+
+                  @if (state(l.id)?.expanded) {
+                    @if (state(l.id)?.contentLoading) {
+                      <div class="px-6 py-4 border-t-2 border-ink"><app-loading-spinner /></div>
+                    } @else if (state(l.id)?.accessDenied) {
+                      <div class="px-6 py-4 border-t-2 border-ink bg-paper-dim">
+                        <p class="text-[13px] text-ink-soft">This lesson is locked. <a [routerLink]="['/courses', courseId()]" class="text-cobalt underline underline-offset-2 decoration-2 hover:text-cobalt-deep">Purchase the course</a> to access the content.</p>
+                      </div>
+                    } @else if (!state(l.id)?.content || state(l.id)!.content!.length === 0) {
+                      <div class="px-6 py-4 border-t-2 border-ink text-[13px] text-ink-mute">No content items yet.</div>
+                    } @else {
+                      <div class="border-t-2 border-ink bg-paper-dim divide-y-2 divide-ink/10">
+                        @for (item of sortedContent(l.id); track item.kind + '-' + item.id) {
+                          <div class="px-6 py-4">
+                            @if (item.kind === 'text') {
+                              <div>
+                                <div class="text-[13px] font-semibold text-ink mb-1.5">{{ item.title }}</div>
+                                @if (item.text) { <div class="text-[13px] text-ink-soft whitespace-pre-wrap leading-[1.6]">{{ item.text }}</div> }
+                              </div>
+                            } @else {
+                              <div>
+                                <div class="flex items-center gap-3 mb-2">
+                                  <div class="flex-1 min-w-0">
+                                    <div class="text-[13px] font-semibold text-ink truncate">{{ item.title || item.fileTitle || 'File' }}</div>
+                                    @if (item.mimeType) { <div class="font-mono text-[11px] text-ink-mute">{{ item.mimeType }}</div> }
+                                  </div>
+                                  @if (item.contentFileId) { <a [href]="api.getDownloadUrl(courseId(), l.id, item.contentFileId!)" target="_blank" rel="noreferrer" class="text-[12px] text-cobalt underline underline-offset-2 decoration-2 hover:text-cobalt-deep shrink-0">Download</a> }
+                                </div>
+                                @if (item.contentFileId && (item.mimeType ?? '').startsWith('image/')) { <img [src]="api.getInlineUrl(courseId(), l.id, item.contentFileId!)" [alt]="item.title || item.fileTitle || ''" class="max-w-full border-2 border-ink" /> }
+                                @if (item.contentFileId && (item.mimeType ?? '').startsWith('video/')) { <video controls [src]="api.getInlineUrl(courseId(), l.id, item.contentFileId!)" class="w-full max-h-[360px] border-2 border-ink bg-black">Your browser does not support the video tag.</video> }
+                                @if (item.contentFileId && (item.mimeType ?? '').startsWith('audio/')) { <audio controls [src]="api.getInlineUrl(courseId(), l.id, item.contentFileId!)" class="w-full">Your browser does not support the audio element.</audio> }
+                              </div>
+                            }
+                          </div>
+                        }
+                        <div class="px-6 py-3">
+                          <a [routerLink]="['/courses', courseId(), 'lessons', l.id]" class="inline-flex items-center gap-1 t-label text-cobalt hover:text-cobalt-deep">Open full lesson<lucide-icon [img]="chevronRight" class="w-3.5 h-3.5" /></a>
+                        </div>
+                      </div>
+                    }
+                  }
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </div>
+    </div>
+  

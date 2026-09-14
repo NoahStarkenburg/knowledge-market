@@ -1,0 +1,43 @@
+<div class="panel shadow-hard">
+  <div class="px-6 pt-6 pb-5 border-b-2 border-ink">
+    <div class="font-display display-x font-extrabold text-[52px] leading-none tracking-[-0.03em] text-cobalt tabular-nums">{{ fmtPrice(course().priceAmount) }}</div>
+    <p class="t-label text-ink-mute mt-3">{{ course().priceAmount === 0 ? 'Free · No card needed' : 'USD · One-time purchase' }}</p>
+    @if (avgRating() !== null && reviewsTotal() > 0) {
+      <div class="flex items-center gap-2 mt-4 pt-4 border-t-2 border-ink">
+        <span class="font-display font-extrabold text-[18px] tabular-nums text-ink">{{ avgRating()!.toFixed(1) }}</span>
+        <app-stars [value]="roundAvg()" size="sm" />
+        <span class="t-micro text-ink-mute">{{ reviewsTotal() }} {{ reviewsTotal() === 1 ? 'review' : 'reviews' }}</span>
+      </div>
+    }
+  </div>
+
+  <div class="px-6 py-5 border-b-2 border-ink">
+    <p class="t-label text-ink-mute mb-4">What you get</p>
+    <dl class="space-y-2.5">
+      @for (row of whatYouGet(); track row.label) {
+        <div class="flex items-baseline justify-between gap-3 text-[14px]"><dt class="text-ink-soft">{{ row.label }}</dt><dd class="t-label text-ink">{{ row.value }}</dd></div>
+      }
+    </dl>
+  </div>
+
+  <div class="px-6 py-5 space-y-2.5">
+    @if (successMessage()) { <app-alert type="success">{{ successMessage() }}</app-alert> }
+    @if (error()) { <app-form-error-list [error]="error()" /> }
+
+    @if (!isOwner() && isEnrolled()) {
+      <button appButton class="w-full" size="lg" (click)="go(['/courses', course().id, 'lessons'])">Go to course<lucide-icon [img]="chevronIcon" class="w-4 h-4 ml-1" /></button>
+      <p class="text-center t-label text-[#1b5e34]">You have full access</p>
+    }
+
+    @if (!isOwner() && !isEnrolled()) {
+      <button appButton class="w-full" size="lg" (click)="purchase()" [disabled]="purchaseLoading()">{{ purchaseLoading() ? 'Processing…' : (course().priceAmount === 0 ? 'Enroll for free' : 'Buy for ' + fmtPrice(course().priceAmount)) }}</button>
+      <button appButton variant="secondary" class="w-full" (click)="subscribe()" [disabled]="subscribeLoading()">{{ subscribeLoading() ? 'Subscribing…' : 'Subscribe to creator' }}</button>
+      <button (click)="go(['/courses', course().id, 'lessons'])" class="w-full t-label text-ink-mute hover:text-ink transition-colors text-center py-1">Preview free lessons →</button>
+    }
+
+    @if (isOwner()) {
+      <button appButton class="w-full" size="lg" (click)="go(['/courses', course().id, 'lessons'])">Manage lessons<lucide-icon [img]="chevronIcon" class="w-4 h-4 ml-1" /></button>
+      <p class="text-center t-label text-ink-mute">{{ lessonsCount() }} lesson{{ lessonsCount() !== 1 ? 's' : '' }} added{{ freePreviewCount() > 0 ? ' · ' + freePreviewCount() + ' free' : '' }}</p>
+    }
+  </div>
+</div>

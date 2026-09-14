@@ -1,0 +1,60 @@
+    <header class="sticky top-0 z-50 w-full border-b-2 border-ink bg-paper">
+      <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[60] focus:bg-cobalt focus:text-white focus:px-3 focus:py-2 focus:font-mono focus:uppercase focus:tracking-[0.12em] focus:text-[11px] focus:font-bold">
+        Skip to content
+      </a>
+      <div class="max-w-[1320px] mx-auto px-5 sm:px-6 h-16 flex items-center justify-between gap-8">
+        <a routerLink="/" class="flex items-center gap-2.5 shrink-0 group">
+          <app-ornament [size]="18" class="text-cobalt" />
+          <span class="font-display font-extrabold uppercase tracking-[-0.01em] text-[18px] leading-none">
+            <span class="text-ink">Knowledge</span><span class="text-cobalt">Market</span>
+          </span>
+        </a>
+
+        @if (auth.isAuthenticated()) {
+          <nav class="hidden md:flex items-center gap-7 flex-1">
+            <a routerLink="/courses" routerLinkActive #a1="routerLinkActive" [class]="link(a1.isActive)">Catalog</a>
+            <a routerLink="/settings/learning" routerLinkActive #a2="routerLinkActive" [class]="link(a2.isActive)">Learning</a>
+            <a routerLink="/settings/dashboard" routerLinkActive #a3="routerLinkActive" [class]="link(a3.isActive)">Dashboard</a>
+            @if (auth.isAdmin()) {
+              <a routerLink="/admin" routerLinkActive #a4="routerLinkActive" [class]="link(a4.isActive)">Admin</a>
+            }
+          </nav>
+        }
+
+        <div class="hidden md:flex items-center gap-6">
+          @if (auth.isAuthenticated()) {
+            <a routerLink="/settings" routerLinkActive #a5="routerLinkActive" [class]="link(a5.isActive)">Account</a>
+            <button type="button" (click)="handleLogout()" class="t-label text-ink-mute hover:text-ink transition-colors">Sign out</button>
+          } @else {
+            <a routerLink="/login" class="t-label text-ink-mute hover:text-ink transition-colors">Log in</a>
+            <a routerLink="/register" class="inline-flex items-center t-label bg-ink text-paper border-2 border-ink px-4 py-2 shadow-hard-sm hover:bg-cobalt hover:border-cobalt hover:text-white active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition-[background-color,color,border-color,transform,box-shadow] duration-100">Start learning</a>
+          }
+        </div>
+
+        <button type="button" (click)="mobileOpen.set(!mobileOpen())" [attr.aria-expanded]="mobileOpen()" aria-controls="mobile-nav" class="md:hidden t-label text-ink border-2 border-ink px-3 py-1.5">
+          {{ mobileOpen() ? 'Close' : 'Menu' }}
+        </button>
+      </div>
+
+      @if (mobileOpen()) {
+        <nav id="mobile-nav" class="md:hidden border-t-2 border-ink bg-paper">
+          <div class="max-w-[1320px] mx-auto px-5 sm:px-6 py-4">
+            @if (auth.isAuthenticated()) {
+              <a routerLink="/courses" (click)="mobileOpen.set(false)" class="block py-2.5 font-mono uppercase tracking-[0.12em] text-[13px] font-bold text-ink">Catalog</a>
+              <a routerLink="/settings/learning" (click)="mobileOpen.set(false)" class="block py-2.5 font-mono uppercase tracking-[0.12em] text-[13px] font-bold text-ink">Learning</a>
+              <a routerLink="/settings/dashboard" (click)="mobileOpen.set(false)" class="block py-2.5 font-mono uppercase tracking-[0.12em] text-[13px] font-bold text-ink">Dashboard</a>
+              <a routerLink="/settings" (click)="mobileOpen.set(false)" class="block py-2.5 font-mono uppercase tracking-[0.12em] text-[13px] font-bold text-ink">Account</a>
+              @if (auth.isAdmin()) {
+                <a routerLink="/admin" (click)="mobileOpen.set(false)" class="block py-2.5 font-mono uppercase tracking-[0.12em] text-[13px] font-bold text-ink">Admin</a>
+              }
+              <button (click)="handleLogout()" class="block py-2.5 w-full text-left font-mono uppercase tracking-[0.12em] text-[13px] font-bold text-ink-mute">Sign out</button>
+            } @else {
+              <a routerLink="/courses" (click)="mobileOpen.set(false)" class="block py-2.5 font-mono uppercase tracking-[0.12em] text-[13px] font-bold text-ink">Catalog</a>
+              <a routerLink="/login" (click)="mobileOpen.set(false)" class="block py-2.5 font-mono uppercase tracking-[0.12em] text-[13px] font-bold text-ink">Log in</a>
+              <a routerLink="/register" (click)="mobileOpen.set(false)" class="block py-2.5 font-mono uppercase tracking-[0.12em] text-[13px] font-bold text-ink">Start learning</a>
+            }
+          </div>
+        </nav>
+      }
+    </header>
+  

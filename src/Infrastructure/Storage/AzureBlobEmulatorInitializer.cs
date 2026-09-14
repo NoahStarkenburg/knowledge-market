@@ -33,7 +33,7 @@ public sealed class AzureBlobEmulatorInitializer(
         // so the browser first sends a CORS preflight and only proceeds if storage allows it.
         // Downloads need no rule: they are redirects followed by <img>, <video> and new tabs,
         // which do not read the response from script.
-        var origin = cfg["Cors:FrontendOrigin"] is { Length: > 0 } o ? o : "http://localhost:5173";
+        var origin = cfg["Cors:FrontendOrigin"] is { Length: > 0 } o ? o : "http://localhost:4200";
 
         // Read, change CORS, write the whole document back. Service properties are one document
         // (logging, metrics, CORS, ...), and Azurite rejects a write that carries only part of it.

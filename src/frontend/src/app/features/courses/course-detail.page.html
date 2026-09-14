@@ -1,0 +1,127 @@
+<div class="min-h-screen bg-paper">
+  <app-form-error-list [error]="error()" />
+
+  @if (loading() && !course()) {
+    <div class="border-b-2 border-ink py-12 px-6">
+      <div class="max-w-[1320px] mx-auto"><app-skeleton class="h-3 w-32 mb-4" /><app-skeleton class="h-12 w-2/3 mb-3" /><app-skeleton class="h-4 w-1/3" /></div>
+    </div>
+    <div class="max-w-[1320px] mx-auto px-6 py-8 grid lg:grid-cols-3 gap-8">
+      <div class="lg:col-span-2 space-y-4"><app-skeleton class="h-6 w-40" /><app-skeleton class="h-4 w-full" /><app-skeleton class="h-4 w-3/4" /><app-skeleton class="h-16" /><app-skeleton class="h-16" /></div>
+      <div><app-skeleton class="h-64" /></div>
+    </div>
+  }
+
+  @if (course(); as c) {
+    <!-- Hero -->
+    <div class="border-b-2 border-ink bg-grid">
+      <div class="max-w-[1320px] mx-auto px-5 sm:px-6 py-12 md:py-16">
+        <div class="t-eyebrow text-cobalt mb-5">
+          {{ c.tags[0] ?? 'Course' }}
+          @if (c.publishedAt) { <span class="text-ink-mute"> / Published {{ longDate(c.publishedAt) }}</span> } @else { <span class="text-ink-mute"> / Draft</span> }
+          @if (isOwner()) { <span class="text-ink-mute"> / You are the author</span> }
+        </div>
+        <h1 class="font-display font-extrabold leading-[0.92] tracking-[-0.03em] text-ink max-w-[24ch] text-[clamp(2.25rem,6vw,4.25rem)] mb-5">{{ c.title }}</h1>
+        @if (c.description) { <p class="text-[17px] leading-[1.55] text-ink-soft max-w-[64ch] mb-6">{{ c.description }}</p> }
+        <div class="flex items-baseline gap-4 flex-wrap t-label text-ink-mute">
+          <span class="text-ink">{{ c.status === 'Published' ? 'In print' : 'In draft' }}</span>
+          @for (tag of c.tags.slice(1); track tag) { <span class="before:content-['/'] before:mr-2 before:text-ink-mute">{{ tag }}</span> }
+        </div>
+      </div>
+    </div>
+
+    <!-- Body -->
+    <div class="max-w-[1320px] mx-auto px-5 sm:px-6 py-10">
+      <div class="flex flex-col lg:flex-row gap-8 items-start">
+        <!-- Left -->
+        <div class="flex-1 min-w-0 w-full space-y-6">
+          @if (c.introVideoFileId) {
+            <div class="bg-black border-2 border-ink overflow-hidden">
+              <video controls preload="metadata" [poster]="c.thumbnailFileId ? api.getCourseThumbnailUrl(c.id) + '?v=' + thumbnailVersion() : null" class="w-full block" [src]="api.getCourseIntroVideoUrl(c.id) + '?v=' + videoVersion()">
+                Your browser does not support the video tag.
+              </video>
+            </div>
+          }
+
+          @if (c.description) {
+            <div class="panel p-6">
+              <div class="t-label text-ink-mute mb-3">About this course</div>
+              <p class="text-ink-soft text-[15px] leading-[1.7]">{{ c.description }}</p>
+            </div>
+          }
+
+          <!-- Curriculum -->
+          <div class="panel">
+            <div class="panel-hd flex items-center justify-between">
+              <h2 class="t-heading text-ink">Curriculum</h2>
+              <span class="t-label text-ink-mute">
+                {{ lessons().length }} lesson{{ lessons().length !== 1 ? 's' : '' }}
+                @if (freePreviewCount() > 0) { <span class="text-cobalt"> · {{ freePreviewCount() }} free</span> }
+              </span>
+            </div>
+            @if (lessons().length === 0) {
+              <div class="px-6 py-10 text-center text-ink-mute text-[14px]">
+                No lessons added yet.
+                @if (isOwner()) { <a [routerLink]="['/courses', c.id, 'lessons']" class="ml-1 text-cobalt font-semibold hover:underline underline-offset-4">Add lessons →</a> }
+              </div>
+            } @else {
+              <ol class="divide-y-2 divide-ink/10">
+                @for (lesson of lessons(); track lesson.id; let idx = $index) {
+                  <li class="flex items-center gap-3 px-6 py-4 transition-colors" [class]="lessonOpen(lesson) ? 'hover:bg-paper-dim/50' : ''">
+                    <span class="font-mono text-ink-mute text-[12px] w-6 text-right shrink-0 tabular-nums">{{ (idx + 1).toString().padStart(2, '0') }}</span>
+                    @if (lessonOpen(lesson)) { <lucide-icon [img]="playIcon" class="w-4 h-4 text-cobalt shrink-0" /> } @else { <lucide-icon [img]="lockIcon" class="w-4 h-4 text-ink-mute shrink-0" /> }
+                    @if (lessonOpen(lesson)) {
+                      <a [routerLink]="['/courses', c.id, 'lessons', lesson.id]" class="flex-1 text-[14px] text-ink hover:text-cobalt transition-colors font-semibold">{{ lesson.title }}</a>
+                    } @else {
+                      <span class="flex-1 text-[14px] text-ink-mute">{{ lesson.title }}</span>
+                    }
+                    @if (lesson.isFreePreview) { <span class="t-micro bg-cobalt text-white px-2 py-1 shrink-0">Free</span> }
+                    @else if (isEnrolled()) { <span class="t-micro text-[#1b5e34] shrink-0">Unlocked</span> }
+                    @else { <span class="t-micro text-ink-mute shrink-0">Members</span> }
+                  </li>
+                }
+              </ol>
+            }
+          </div>
+
+          <app-course-reviews [courseId]="c.id" [canReview]="canReview()" (summaryChange)="reviewSummary.set($event)" />
+
+          @if (isOwner()) {
+            <div class="space-y-6">
+              <app-course-owner-panel [course]="c" [thumbnailVersion]="thumbnailVersion()" (updated)="onOwnerUpdated($event)" (deleted)="onOwnerDeleted()" (mediaChanged)="onMediaChanged()" />
+            </div>
+          }
+        </div>
+
+        <!-- Right sidebar -->
+        <div class="w-full lg:w-[340px] shrink-0 lg:sticky lg:top-20">
+          <app-course-purchase-card
+            [course]="c"
+            [isOwner]="isOwner()"
+            [isEnrolled]="isEnrolled()"
+            [lessonsCount]="lessons().length"
+            [freePreviewCount]="freePreviewCount()"
+            [avgRating]="reviewSummary().avgRating"
+            [reviewsTotal]="reviewSummary().total" />
+        </div>
+      </div>
+    </div>
+
+    @if (moreFromCreator().length > 0) {
+      <div class="border-t-2 border-ink">
+        <div class="max-w-[1320px] mx-auto px-5 sm:px-6 py-14 md:py-16">
+          <div class="t-eyebrow text-cobalt mb-3">More from this creator</div>
+          <h2 class="font-display font-extrabold uppercase tracking-[-0.02em] text-[clamp(1.6rem,4vw,2.5rem)] leading-[0.95] mb-8">Other published courses</h2>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            @for (mc of moreFromCreator(); track mc.id; let idx = $index) {
+              <a [routerLink]="['/courses', mc.id]" class="group flex flex-col panel p-5 transition-[transform,box-shadow] duration-100 hover:-translate-x-[3px] hover:-translate-y-[3px] hover:shadow-hard">
+                <div class="flex items-center justify-between mb-3"><span class="t-micro text-ink-mute">No. {{ (idx + 1).toString().padStart(2, '0') }}</span><span class="t-micro text-cobalt">{{ mc.tags[0] ?? 'General' }}</span></div>
+                <h3 class="font-display font-bold leading-[1.05] tracking-[-0.01em] text-[18px] text-ink mb-3 line-clamp-2">{{ mc.title }}</h3>
+                <div class="mt-auto pt-3 border-t-2 border-ink font-display font-extrabold text-[18px] tabular-nums tracking-[-0.01em] text-cobalt">{{ mc.priceAmount === 0 ? 'Free' : '$' + mc.priceAmount }}</div>
+              </a>
+            }
+          </div>
+        </div>
+      </div>
+    }
+  }
+</div>

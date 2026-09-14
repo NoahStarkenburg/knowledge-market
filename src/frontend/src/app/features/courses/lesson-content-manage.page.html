@@ -1,0 +1,101 @@
+    <div class="min-h-screen bg-paper">
+      <div class="max-w-5xl mx-auto px-5 sm:px-6 py-10">
+        <div class="flex items-start justify-between gap-4 mb-8">
+          <h1 class="font-display display-x font-extrabold uppercase leading-[0.9] tracking-[-0.03em] text-ink text-[clamp(1.9rem,5vw,3rem)]">Manage lesson content</h1>
+          <a [routerLink]="['/courses', courseId(), 'lessons', lessonId()]" class="t-label text-ink-mute hover:text-ink transition-colors shrink-0 mt-2">&larr; View lesson</a>
+        </div>
+
+        @if (isOwner() === false) {
+          <app-alert type="error">You are not the owner of this course, so you cannot manage this lesson's content.</app-alert>
+        } @else {
+          @if (loading()) { <app-loading-spinner /> }
+          <app-form-error-list [error]="error()" />
+          @if (successMessage()) { <app-alert type="success">{{ successMessage() }}</app-alert> }
+
+          <app-card class="mb-4">
+            <h2 class="t-heading text-ink mb-3">Edit lesson</h2>
+            <app-form-error-list [error]="bodyError()" />
+            <form (ngSubmit)="updateBody()" class="space-y-4">
+              <label class="flex flex-col gap-2"><span class="t-label text-ink">Title</span>
+                <input class="input-field" [ngModel]="lessonTitle()" (ngModelChange)="lessonTitle.set($event)" [ngModelOptions]="{ standalone: true }" required name="lt" />
+              </label>
+              <label class="flex flex-col gap-2"><span class="t-label text-ink">Intro / body (markdown)</span>
+                <textarea class="input-field min-h-[100px] resize-y" placeholder="Optional intro text shown at the top of the lesson…" [ngModel]="lessonBody()" (ngModelChange)="lessonBody.set($event)" [ngModelOptions]="{ standalone: true }" name="lb"></textarea>
+              </label>
+              <button appButton type="submit" [disabled]="bodyLoading()">{{ bodyLoading() ? 'Saving...' : 'Save' }}</button>
+            </form>
+          </app-card>
+
+          <div class="grid md:grid-cols-2 gap-4">
+            <app-card>
+              <h2 class="t-heading text-ink mb-3">Add text block</h2>
+              <app-form-error-list [error]="textError()" />
+              <form (ngSubmit)="addText()" class="space-y-4">
+                <label class="flex flex-col gap-2"><span class="t-label text-ink">Title</span>
+                  <input class="input-field" [ngModel]="textTitle()" (ngModelChange)="textTitle.set($event)" [ngModelOptions]="{ standalone: true }" required name="tt" />
+                </label>
+                <label class="flex flex-col gap-2"><span class="t-label text-ink">Body (markdown)</span>
+                  <textarea class="input-field min-h-[80px] resize-y" [ngModel]="textBody()" (ngModelChange)="textBody.set($event)" [ngModelOptions]="{ standalone: true }" name="tb"></textarea>
+                </label>
+                <button appButton type="submit" [disabled]="textLoading()">{{ textLoading() ? 'Adding...' : 'Add text' }}</button>
+              </form>
+            </app-card>
+
+            <app-card>
+              <h2 class="t-heading text-ink mb-3">Upload file</h2>
+              <app-form-error-list [error]="fileError()" />
+              <form (ngSubmit)="uploadFile()" class="space-y-4">
+                <label class="flex flex-col gap-2"><span class="t-label text-ink">File</span>
+                  <input #fileInput type="file" [class]="fileInputClass" (change)="file.set(fileFrom($event))" />
+                </label>
+                <app-google-drive-button (picked)="file.set($event)" />
+                @if (file()) { <p class="text-[12px] text-ink-mute font-mono">Selected: {{ file()!.name }}</p> }
+                <label class="flex flex-col gap-2"><span class="t-label text-ink">Title (optional)</span>
+                  <input class="input-field" [ngModel]="fileTitle()" (ngModelChange)="fileTitle.set($event)" [ngModelOptions]="{ standalone: true }" name="ft" />
+                </label>
+                <button appButton type="submit" [disabled]="fileLoading() || !file()">{{ fileLoading() ? 'Uploading...' : 'Upload & attach' }}</button>
+              </form>
+            </app-card>
+
+            <app-card>
+              <h2 class="t-heading text-ink mb-3">Upload video</h2>
+              <app-form-error-list [error]="videoError()" />
+              <form (ngSubmit)="uploadVideo()" class="space-y-4">
+                <label class="flex flex-col gap-2"><span class="t-label text-ink">Video file</span>
+                  <input #videoInput type="file" accept="video/*" [class]="fileInputClass" (change)="videoFile.set(fileFrom($event))" />
+                </label>
+                <app-google-drive-button mimeTypes="video/mp4,video/webm,video/ogg,video/quicktime" (picked)="videoFile.set($event)" />
+                @if (videoFile()) { <p class="text-[12px] text-ink-mute font-mono">Selected: {{ videoFile()!.name }}</p> }
+                <label class="flex flex-col gap-2"><span class="t-label text-ink">Title (optional)</span>
+                  <input class="input-field" [ngModel]="videoTitle()" (ngModelChange)="videoTitle.set($event)" [ngModelOptions]="{ standalone: true }" name="vt" />
+                </label>
+                <button appButton type="submit" [disabled]="videoLoading() || !videoFile()">{{ videoLoading() ? 'Uploading...' : 'Upload video' }}</button>
+              </form>
+            </app-card>
+          </div>
+
+          <app-card class="mt-4">
+            <h2 class="t-heading text-ink mb-3">Current content order</h2>
+            @if (combinedItems().length === 0) {
+              <p class="text-[14px] text-ink-mute">No content yet.</p>
+            } @else {
+              <ul class="space-y-2">
+                @for (item of combinedItems(); track item.kind + '-' + item.id; let idx = $index) {
+                  <li class="flex justify-between items-center gap-3 border-2 border-ink px-3 py-2">
+                    <div class="min-w-0">
+                      <div class="text-[14px] font-semibold text-ink truncate">{{ idx + 1 }}. {{ item.title }}</div>
+                      <div class="t-micro text-ink-mute mt-0.5">{{ item.kind }}</div>
+                    </div>
+                    <div class="flex gap-1 shrink-0">
+                      <button appButton variant="secondary" size="sm" aria-label="Move up" (click)="moveItem(item.id, item.kind, 'up')">↑</button>
+                      <button appButton variant="secondary" size="sm" aria-label="Move down" (click)="moveItem(item.id, item.kind, 'down')">↓</button>
+                    </div>
+                  </li>
+                }
+              </ul>
+            }
+          </app-card>
+        }
+      </div>
+    </div>
+  

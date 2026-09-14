@@ -1,0 +1,40 @@
+    <div class="min-h-screen bg-paper bg-grid flex flex-col items-center justify-center px-4 py-12">
+      <a routerLink="/" class="flex items-center gap-2.5 mb-8">
+        <app-ornament [size]="20" class="text-cobalt" />
+        <span class="font-display font-extrabold uppercase tracking-[-0.01em] text-[20px] leading-none">
+          <span class="text-ink">Knowledge</span><span class="text-cobalt">Market</span>
+        </span>
+      </a>
+
+      <div class="panel shadow-hard p-8 w-full max-w-md">
+        <p class="t-eyebrow text-cobalt mb-3">Sign in</p>
+        <h1 class="font-display font-extrabold uppercase tracking-[-0.02em] leading-[0.95] text-[clamp(1.9rem,5vw,2.5rem)] text-ink mb-3">Welcome back</h1>
+        <p class="text-[14px] leading-[1.6] text-ink-soft mb-7">Sign in to your account to continue.</p>
+
+        <form (ngSubmit)="submit()">
+          <app-form-error-list [error]="error()" />
+          <app-field label="Email">
+            <input appInput type="email" required autocomplete="email" name="email"
+                   [ngModel]="email()" (ngModelChange)="email.set($event)" [ngModelOptions]="{ standalone: true }" />
+          </app-field>
+          <app-field label="Password">
+            <input appInput type="password" required autocomplete="current-password" name="password"
+                   [ngModel]="password()" (ngModelChange)="password.set($event)" [ngModelOptions]="{ standalone: true }" />
+          </app-field>
+          <div class="flex justify-end -mt-3 mb-5">
+            <a routerLink="/forgot-password" class="t-micro text-ink-mute hover:text-cobalt transition-colors">Forgot your password?</a>
+          </div>
+          <button appButton type="submit" size="lg" class="w-full" [disabled]="loading()">
+            {{ loading() ? 'Signing in...' : 'Sign in' }}
+          </button>
+        </form>
+
+        <app-google-sign-in-button />
+
+        <p class="text-[13px] text-ink-soft mt-6 text-center">
+          Don't have an account?
+          <a routerLink="/register" class="font-semibold text-cobalt hover:text-ink underline underline-offset-2 decoration-2">Create account</a>
+        </p>
+      </div>
+    </div>
+  

@@ -1,23 +1,44 @@
-import js from '@eslint/js'
-import globals from 'globals'
-import reactHooks from 'eslint-plugin-react-hooks'
-import reactRefresh from 'eslint-plugin-react-refresh'
-import tseslint from 'typescript-eslint'
-import { defineConfig, globalIgnores } from 'eslint/config'
+// @ts-check
+const eslint = require('@eslint/js');
+const { defineConfig } = require('eslint/config');
+const tseslint = require('typescript-eslint');
+const angular = require('angular-eslint');
 
-export default defineConfig([
-  globalIgnores(['dist']),
+module.exports = defineConfig([
   {
-    files: ['**/*.{ts,tsx}'],
+    files: ['**/*.ts'],
     extends: [
-      js.configs.recommended,
+      eslint.configs.recommended,
       tseslint.configs.recommended,
-      reactHooks.configs.flat.recommended,
-      reactRefresh.configs.vite,
+      tseslint.configs.stylistic,
+      angular.configs.tsRecommended,
     ],
-    languageOptions: {
-      ecmaVersion: 2020,
-      globals: globals.browser,
+    processor: angular.processInlineTemplates,
+    rules: {
+      '@angular-eslint/directive-selector': [
+        'error',
+        {
+          type: 'attribute',
+          prefix: 'app',
+          style: 'camelCase',
+        },
+      ],
+      '@angular-eslint/component-selector': [
+        'error',
+        {
+          type: 'element',
+          prefix: 'app',
+          style: 'kebab-case',
+        },
+      ],
     },
   },
-])
+  {
+    files: ['**/*.html'],
+    extends: [angular.configs.templateRecommended, angular.configs.templateAccessibility],
+    rules: {
+      // `x != null` is the idiomatic check for both null and undefined; strict equality everywhere else.
+      '@angular-eslint/template/eqeqeq': ['error', { allowNullOrUndefined: true }],
+    },
+  },
+]);

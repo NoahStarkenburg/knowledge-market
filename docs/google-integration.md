@@ -15,7 +15,7 @@ Both use the same Google Cloud project and OAuth consent screen.
 2. **APIs & Services → Library**: enable **Google Picker API** and **Google Drive API**.
 3. **APIs & Services → OAuth consent screen**: configure it (External, add yourself as a test user). No verification is required because Drive import uses the `drive.file` scope, which only grants access to files the user explicitly picks.
 4. **APIs & Services → Credentials → Create credentials → OAuth client ID → Web application**:
-   - **Authorized JavaScript origins**: `http://localhost:5173`
+   - **Authorized JavaScript origins**: `http://localhost:4200`
    - **Authorized redirect URIs**: `http://localhost:5116/signin-google`
    - Copy the **Client ID** and **Client secret**.
 5. **Credentials → Create credentials → API key**: copy it, then restrict it to the **Google Picker API**.
@@ -39,21 +39,22 @@ When both are present, `Program.cs` wires the Google handler and maps `/api/auth
 
 ## 3. Frontend config
 
-Create `src/frontend/.env.local`:
+These are build-time values compiled into the bundle (see `src/frontend/src/build-config.d.ts`). Locally, pass them to the dev server:
 
+```bash
+cd src/frontend
+npm start -- \
+  --define "GOOGLE_AUTH='true'" \
+  --define "GOOGLE_CLIENT_ID='<oauth web client id>'" \
+  --define "GOOGLE_API_KEY='<picker api key>'"
 ```
-# Sign in with Google button
-VITE_GOOGLE_AUTH=true
 
-# Import from Google Drive (Picker)
-VITE_GOOGLE_CLIENT_ID=<oauth web client id>
-VITE_GOOGLE_API_KEY=<picker api key>
-```
+For the Docker image, pass the same names as build arguments (`--build-arg GOOGLE_AUTH=true`).
 
-- `VITE_GOOGLE_AUTH` toggles the "Continue with Google" button.
-- `VITE_GOOGLE_CLIENT_ID` + `VITE_GOOGLE_API_KEY` toggle the "Import from Google Drive" buttons. If either is missing, the buttons render nothing.
+- `GOOGLE_AUTH` toggles the "Continue with Google" button.
+- `GOOGLE_CLIENT_ID` + `GOOGLE_API_KEY` toggle the "Import from Google Drive" buttons. If either is missing, the buttons render nothing.
 
-The OAuth Client ID is the same value in both places.
+The OAuth Client ID is the same value in both places. Both values are public by design; the client secret stays on the server.
 
 ---
 
@@ -62,9 +63,9 @@ The OAuth Client ID is the same value in both places.
 | Concern | File |
 |---|---|
 | Google login endpoints | `src/Api/Program.cs` (`/api/auth/google/*`) |
-| "Continue with Google" button | `src/frontend/src/components/Auth/GoogleSignInButton.tsx` |
-| Drive Picker + token + download | `src/frontend/src/hooks/useGoogleDrivePicker.ts` |
-| "Import from Google Drive" button | `src/frontend/src/components/Media/GoogleDriveButton.tsx` |
-| Wired into uploads | `LessonContentManagePage.tsx` (file, video), `CourseDetailPage.tsx` (thumbnail, intro video) |
+| "Continue with Google" button | `src/frontend/src/app/shared/components/google-sign-in-button.ts` |
+| Drive Picker + token + download | `src/frontend/src/app/core/google-drive-picker.service.ts` |
+| "Import from Google Drive" button | `src/frontend/src/app/shared/components/google-drive-button.ts` |
+| Wired into uploads | `lesson-content-manage.page.ts` (file, video), `course-owner-panel.ts` (thumbnail, intro video) |
 
 Drive import reuses the existing upload endpoints (`/lessons/upload`, `/thumbnail`, `/intro-video`) and their MIME/size validation — a Drive-picked file follows the exact same path as a locally chosen one.

@@ -24,7 +24,7 @@ public sealed class UsersController(
     {
         var result = await users.RegisterAsync(req, ct);
 
-        var frontendUrl = cfg["Cors:FrontendOrigin"] ?? "http://localhost:5173";
+        var frontendUrl = cfg["Cors:FrontendOrigin"] ?? "http://localhost:4200";
         var verifyUrl = $"{frontendUrl}/verify-email?token={Uri.EscapeDataString(result.VerificationToken)}";
 
         _ = email.SendAsync(result.Email, "Verify your KnowledgeMarket email",

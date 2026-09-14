@@ -1,0 +1,53 @@
+    <section class="panel">
+      <div class="panel-hd flex items-center justify-between gap-4 flex-wrap">
+        <div class="flex items-center gap-3"><h2 class="t-heading text-ink">Users</h2>@if (result()) { <span class="t-micro bg-cobalt text-white px-2 py-1 tabular-nums">{{ result()!.total.toLocaleString() }}</span> }</div>
+        <form (ngSubmit)="search()" class="flex items-center gap-2">
+          <div class="relative"><lucide-icon [img]="searchIcon" class="w-3.5 h-3.5 text-ink-mute absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" /><input type="text" [ngModel]="query()" (ngModelChange)="query.set($event)" [ngModelOptions]="{ standalone: true }" placeholder="Search by email…" [class]="inputClass" /></div>
+          <button appButton type="submit" size="sm" variant="secondary" [disabled]="loading()">Search</button>
+        </form>
+      </div>
+
+      @if (roleState()?.status === 'error') { <div class="px-6 py-2"><app-alert type="error">{{ roleState()!.errorMsg }}</app-alert></div> }
+      @if (roleState()?.status === 'success') { <div class="px-6 py-2"><app-alert type="success">Role assigned successfully.</app-alert></div> }
+
+      @if (loading() && !result()) {
+        <div class="flex items-center justify-center py-16"><app-loading-spinner /></div>
+      } @else if (error()) {
+        <div class="px-6 py-6"><app-alert type="error">{{ error() }}</app-alert></div>
+      } @else {
+        <div class="overflow-x-auto">
+          <table class="w-full text-[13px]">
+            <thead><tr class="border-b-2 border-ink bg-paper-dim"><th class="text-left px-6 py-3 t-micro text-ink-mute">Email</th><th class="text-left px-6 py-3 t-micro text-ink-mute">Registered</th><th class="text-left px-6 py-3 t-micro text-ink-mute">Verified</th><th class="text-right px-6 py-3 t-micro text-ink-mute">Actions</th></tr></thead>
+            <tbody>
+              @if (result() && result()!.items.length === 0) { <tr><td colspan="4" class="px-6 py-10 text-center text-ink-mute">No users found.</td></tr> }
+              @for (user of result()?.items ?? []; track user.id) {
+                <tr class="border-b-2 border-ink/10 hover:bg-paper-dim transition-colors">
+                  <td class="px-6 py-3 text-ink font-semibold">{{ user.email }}</td>
+                  <td class="px-6 py-3 text-ink-mute tabular-nums">{{ date(user.registeredAt) }}</td>
+                  <td class="px-6 py-3">
+                    @if (user.isEmailVerified) { <span class="inline-flex items-center gap-1 t-micro text-[#1b5e34]"><lucide-icon [img]="checkIcon" class="w-3.5 h-3.5" /><span>Yes</span></span> }
+                    @else { <span class="inline-flex items-center gap-1 t-micro text-ink-mute"><lucide-icon [img]="xIcon" class="w-3.5 h-3.5" /><span>No</span></span> }
+                  </td>
+                  <td class="px-6 py-3 text-right">
+                    @if (roleState()?.userId === user.id && roleState()?.status === 'confirming') {
+                      <span class="inline-flex items-center gap-2"><span class="t-micro text-ink">Make admin?</span><button appButton size="sm" variant="danger" (click)="confirmRole(user.id)">Confirm</button><button appButton size="sm" variant="ghost" (click)="roleState.set(null)">Cancel</button></span>
+                    } @else if (roleState()?.userId === user.id && roleState()?.status === 'loading') {
+                      <span class="inline-flex items-center gap-1.5 t-micro text-ink-mute"><span class="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"></span>Assigning…</span>
+                    } @else {
+                      <button appButton size="sm" variant="secondary" (click)="roleState.set({ userId: user.id, status: 'confirming' })" [disabled]="roleState()?.status === 'loading'">Make admin</button>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (result() && result()!.total > pageSize) {
+          <div class="px-6 py-3 border-t-2 border-ink flex items-center justify-between">
+            <span class="t-label text-ink-mute">Page {{ page() }} of {{ totalPages() }}</span>
+            <div class="flex items-center gap-1.5"><button appButton size="sm" variant="secondary" (click)="page.set(page() - 1)" [disabled]="page() <= 1 || loading()"><lucide-icon [img]="leftIcon" class="w-3.5 h-3.5" /></button><button appButton size="sm" variant="secondary" (click)="page.set(page() + 1)" [disabled]="page() >= totalPages() || loading()"><lucide-icon [img]="rightIcon" class="w-3.5 h-3.5" /></button></div>
+          </div>
+        }
+      }
+    </section>
+  

@@ -1,0 +1,69 @@
+    <div class="p-6 md:p-8">
+      <div class="mb-8">
+        <div class="t-eyebrow text-cobalt mb-3">Profile &amp; security</div>
+        <h1 class="font-display display-x font-extrabold uppercase leading-[0.9] tracking-[-0.03em] text-ink text-[clamp(2.5rem,7vw,4rem)]">Account</h1>
+        <p class="text-[14px] text-ink-soft mt-4 max-w-[60ch]">Manage your account information and security.</p>
+      </div>
+
+      <div class="space-y-4 max-w-xl">
+        <div class="panel p-5">
+          <h3 class="t-heading text-ink mb-3">Display name</h3>
+          <input appInput type="text" [ngModel]="nameInput()" (ngModelChange)="nameInput.set($event)" [ngModelOptions]="{ standalone: true }" maxlength="100" placeholder="Enter a display name" class="w-full" />
+          <app-form-error-list [error]="nameError()" />
+          <div class="flex items-center gap-3 mt-3"><button appButton size="sm" [disabled]="nameSaving()" (click)="saveName()">{{ nameSaving() ? 'Saving...' : 'Save' }}</button>@if (nameSaved()) { <span class="text-[12px] text-[#1b5e34] font-medium">Saved</span> }</div>
+        </div>
+
+        <div class="panel p-5">
+          <h3 class="t-heading text-ink mb-3">Email address</h3>
+          <div class="bg-paper-dim border-2 border-ink px-3 py-2.5 text-[14px] text-ink-mute mb-3">{{ auth.email() }}</div>
+          <input appInput type="email" [ngModel]="emailInput()" (ngModelChange)="emailInput.set($event)" [ngModelOptions]="{ standalone: true }" placeholder="Enter new email address" class="w-full" />
+          <p class="text-[11px] text-ink-mute mt-2">Changing your email will require re-verification.</p>
+          <app-form-error-list [error]="emailError()" />
+          <div class="flex items-center gap-3 mt-3"><button appButton size="sm" [disabled]="emailSaving() || !emailInput().trim()" (click)="changeEmail()">{{ emailSaving() ? 'Saving...' : 'Change email' }}</button>@if (emailSaved()) { <span class="text-[12px] text-[#1b5e34] font-medium">Email updated. Check your inbox to verify.</span> }</div>
+        </div>
+
+        <div class="panel p-5">
+          <h3 class="t-heading text-ink mb-3">Change password</h3>
+          <div class="space-y-3">
+            <input appInput type="password" [ngModel]="currentPassword()" (ngModelChange)="currentPassword.set($event)" [ngModelOptions]="{ standalone: true }" placeholder="Current password" class="w-full" />
+            <input appInput type="password" [ngModel]="newPassword()" (ngModelChange)="newPassword.set($event)" [ngModelOptions]="{ standalone: true }" placeholder="New password" class="w-full" />
+            <input appInput type="password" [ngModel]="confirmPassword()" (ngModelChange)="confirmPassword.set($event)" [ngModelOptions]="{ standalone: true }" placeholder="Confirm new password" class="w-full" />
+          </div>
+          @if (pwLocalError()) { <p class="text-[12px] text-danger mt-2">{{ pwLocalError() }}</p> }
+          <app-form-error-list [error]="pwError()" />
+          <div class="flex items-center gap-3 mt-3"><button appButton size="sm" [disabled]="pwSaving() || !currentPassword() || !newPassword()" (click)="changePassword()">{{ pwSaving() ? 'Changing...' : 'Change password' }}</button>@if (pwSaved()) { <span class="text-[12px] text-[#1b5e34] font-medium">Password changed</span> }</div>
+        </div>
+
+        <div class="panel p-5">
+          <h3 class="t-heading text-ink mb-3">Forgot password?</h3>
+          <p class="text-[13px] text-ink-soft mb-4">Reset your password via email if you've forgotten it.</p>
+          <button appButton variant="secondary" size="sm" (click)="router.navigate(['/forgot-password'])">Reset via email</button>
+        </div>
+
+        <div class="panel p-5">
+          <h3 class="t-heading text-ink mb-3">Sign out</h3>
+          <p class="text-[13px] text-ink-soft mb-4">Sign out of your KnowledgeMarket account on this device.</p>
+          <button appButton variant="secondary" (click)="logout()">Sign out</button>
+        </div>
+
+        <div class="bg-chalk border-2 border-danger">
+          <div class="p-5">
+            <h3 class="t-heading text-danger mb-3">Delete account</h3>
+            <p class="text-[13px] text-ink-soft mb-4">Permanently delete your account and all associated data.</p>
+            @if (!deletingAccount()) {
+              <button appButton variant="danger" size="sm" (click)="deletingAccount.set(true)">Delete account</button>
+            } @else {
+              <div class="bg-paper border-2 border-danger p-4">
+                <p class="text-[13px] text-ink font-medium mb-1">This will permanently delete your account and all your data. This cannot be undone.</p>
+                <app-form-error-list [error]="deleteError()" />
+                <div class="flex gap-2 mt-3">
+                  <button appButton variant="secondary" size="sm" [disabled]="deleteLoading()" (click)="deletingAccount.set(false); deleteError.set(undefined)">Cancel</button>
+                  <button appButton variant="danger" size="sm" [disabled]="deleteLoading()" (click)="deleteAccount()">{{ deleteLoading() ? 'Deleting...' : 'Yes, delete my account' }}</button>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  

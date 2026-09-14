@@ -146,13 +146,18 @@ server {
     }
 
     # ----- hashed assets ---------------------------------------------------
-    # Vite names these from a hash of their contents, so index-D1SKo0fw.js can
-    # never return different bytes — change the file and the NAME changes.
-    # That makes a one-year cache safe: there is no such thing as a stale
-    # response, only a filename that no longer exists.
+    # The Angular build names these from a hash of their contents, so
+    # main-TG2OUNMI.js can never return different bytes — change the file and
+    # the NAME changes. That makes a one-year cache safe: there is no such thing
+    # as a stale response, only a filename that no longer exists.
+    #
+    # They sit at the site root (main-, chunk-, polyfills-, styles-) plus
+    # media/ for fonts and images referenced from CSS, so they are matched by
+    # name. Unhashed files such as favicon.ico deliberately fall through to the
+    # default location and get no long cache.
     #
     # `immutable` additionally tells the browser not to revalidate on reload.
-    location /assets/ {
+    location ~ "^/(?:(?:main|chunk|polyfills|styles)-[A-Z0-9]{8}\.(?:js|css)|media/.+)$" {
         if ($from_front_door = 0) { return 403; }
 
         # Set Cache-Control once, explicitly. Using nginx's `expires 1y`

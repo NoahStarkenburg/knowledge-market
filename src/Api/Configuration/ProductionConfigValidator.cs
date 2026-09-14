@@ -21,6 +21,9 @@ public static class ProductionConfigValidator
         Check(cfg["Jwt:SigningKey"], "Jwt:SigningKey", minLength: 32, problems);
         Check(cfg["Admin:Password"], "Admin:Password", minLength: 12, problems);
         Check(cfg["Admin:Email"], "Admin:Email", minLength: 5, problems);
+        // Despite the name, no longer a CORS setting: the app is single-origin. It is the public
+        // base URL the API uses to build links in emails and sign-in redirects, so a missing one
+        // would send users to localhost.
         Check(cfg["Cors:FrontendOrigin"], "Cors:FrontendOrigin", minLength: 8, problems);
         Check(cfg.GetConnectionString("Default"), "ConnectionStrings:Default", minLength: 20, problems);
 

@@ -363,26 +363,10 @@ builder.Services.AddHostedService<AdminSeederHostedService>();
 // Purge expired refresh tokens daily
 builder.Services.AddHostedService<RefreshTokenCleanupService>();
 
-// CORS — in dev allow any localhost port so Vite can use whatever port is free
-builder.Services.AddCors(options =>
-{
-    options.AddDefaultPolicy(policy =>
-        policy.SetIsOriginAllowed(origin =>
-            {
-                if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri)) return false;
-                // Allow any localhost port in development; restrict to configured origins otherwise.
-                if (builder.Environment.IsDevelopment() && (uri.Host == "localhost" || uri.Host == "127.0.0.1")) return true;
-                // Cors:FrontendOrigin may list several origins (comma-separated) so both the
-                // React and Angular frontends can share one backend.
-                var configured = builder.Configuration["Cors:FrontendOrigin"];
-                return configured is not null && configured
-                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                    .Any(o => origin.Equals(o, StringComparison.OrdinalIgnoreCase));
-            })
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials());
-});
+// No CORS policy. The SPA and the API share one origin in every environment (the Vite dev
+// proxy locally, nginx in containers, Front Door in production), so the browser never makes
+// a cross-origin request to this API and there is nothing to allow. Adding a policy back
+// would only widen who may read responses with credentials attached.
 
 if (builder.Environment.IsDevelopment())
 {
@@ -665,7 +649,6 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseCors();
 app.UseSerilogRequestLogging(opts =>
 {
     opts.MessageTemplate =

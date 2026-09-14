@@ -1,13 +1,34 @@
-# Local development dependencies.
+# Two ways to use this file.
 #
-# This file starts the services the app DEPENDS ON. It does not run the app
-# itself — you run that on your host with `dotnet run` and `npm run dev`, so
-# you keep the debugger, hot reload, and a fast rebuild loop.
+# 1. Day-to-day development — dependencies only (the default)
 #
-#     docker compose up -d      # start
-#     docker compose ps         # check health
-#     docker compose down       # stop, keep data
-#     docker compose down -v    # stop and DELETE data (fresh database)
+#        docker compose up -d
+#
+#    Starts SQL Server and nothing else. You run the app on your host with
+#    `dotnet run` and `npm run dev`, so you keep the debugger, hot reload and a
+#    fast rebuild loop. The `web` and `api` services below belong to the "full"
+#    profile, and services with a profile only start when that profile is asked
+#    for — so this command is exactly what it always was.
+#
+# 2. The whole stack in containers — a rehearsal of production
+#
+#        docker compose --profile full up -d --build
+#        open http://localhost:8080
+#
+#    nginx, the API and SQL Server, wired the way they are in Azure: nginx is
+#    the only thing with a published port, and it forwards /api/* to the API.
+#    If the images work together here, a deploy only has Azure problems left.
+#
+# Everyday commands:
+#
+#     docker compose ps                       # status and health
+#     docker compose logs -f api              # follow one service
+#     docker compose --profile full down      # stop everything, keep data
+#     docker compose --profile full down -v   # stop and DELETE all data
+#
+# Values in this file are local-only on purpose. Nothing here protects anything
+# outside your machine. Real secrets live in user-secrets locally and in Key
+# Vault in Azure — see README.
 
 services:
   mssql:
@@ -26,14 +47,23 @@ services:
       # "password". See README.
       MSSQL_SA_PASSWORD: "Dev_Only_LocalPassword_123!"
       # Developer edition: free for non-production use, full feature set.
+      # Not licensed for production, which is one reason production uses
+      # Azure SQL Database instead of this container.
       MSSQL_PID: Developer
     ports:
-      # host:container. If 1433 is already taken on your machine, change the
-      # LEFT number only, and update ConnectionStrings:Default to match.
+      # host:container. Published so `dotnet run` and database tools on your
+      # host can connect. A convenience for development only: in the full
+      # stack the API reaches SQL Server over the private "data" network, and
+      # in Azure the database has no public address at all.
+      #
+      # If 1433 is already taken on your machine, change the LEFT number only,
+      # and update ConnectionStrings:Default to match.
       - "1433:1433"
     volumes:
       # Named volume, so your data survives `docker compose down`.
       - mssqldata:/var/opt/mssql
+    networks:
+      - data
     healthcheck:
       # Reports healthy only once the engine actually answers a query, not
       # merely when the process starts. The API migrates on startup, so it
@@ -44,5 +74,117 @@ services:
       retries: 10
       start_period: 20s
 
+  api:
+    profiles: ["full"]
+    build:
+      # The repository root, because Api.csproj references ten sibling projects.
+      context: .
+      dockerfile: src/Api/Dockerfile
+    image: knowledge-market-api:local
+    environment:
+      # Staging, deliberately. Not Development, so the dev-only seed endpoints
+      # and Swagger are not mapped and the app behaves like a deployed one. Not
+      # Production, because ProductionConfigValidator would (correctly) refuse
+      # the local placeholder values below.
+      ASPNETCORE_ENVIRONMENT: Staging
+
+      # "mssql" is the service name above. Compose runs a DNS server on each
+      # network, so containers find each other by name, never by IP.
+      ConnectionStrings__Default: "Server=mssql,1433;Database=km;User Id=sa;Password=Dev_Only_LocalPassword_123!;TrustServerCertificate=true"
+
+      # Signs login tokens for THIS local stack only. A token it signs is valid
+      # nowhere else, so committing it is safe; production generates its own
+      # key straight into Key Vault. The double underscore is .NET's nesting
+      # convention: Jwt__SigningKey binds to Jwt:SigningKey.
+      Jwt__SigningKey: "compose-local-stack-only-signing-key-not-a-secret"
+
+      # The same local admin account documented in the README.
+      Admin__Email: admin@knowledgemarket.local
+      Admin__Password: DevAdmin@LocalOnly!
+
+      # Despite its name, this is also the base URL the API uses to build links
+      # in verification and password-reset emails, so it must be the address
+      # you actually browse to.
+      Cors__FrontendOrigin: http://localhost:8080
+
+      # Read the real client IP, scheme and host from the X-Client-* headers
+      # nginx sets. Safe here only because nothing but nginx can reach this
+      # container: note the absence of a `ports:` key below.
+      ForwardedHeaders__Enabled: "true"
+
+      # Checkout needs real test keys. Leave Stripe off unless you are testing
+      # payments; set the Stripe__* variables in a gitignored .env to turn it on.
+      Stripe__Disabled: "true"
+    volumes:
+      # Uploads and lesson text are written to the container's filesystem when
+      # Storage:Provider is "local". Without volumes they vanish every time the
+      # container is recreated. Docker initialises a new named volume from the
+      # image's directory, including its ownership, so the non-root app user
+      # can still write here. In Azure this role is played by an Azure Files share.
+      - apistorage:/app/Storage
+      - apicontent:/app/content
+    networks:
+      # On BOTH networks: the bridge between nginx and the database.
+      - edge
+      - data
+    depends_on:
+      mssql:
+        # Wait for HEALTHY, not merely started. SQL Server accepts connections
+        # well before it can answer, and the API migrates the moment it boots.
+        condition: service_healthy
+    # No `ports:` key. The API is reachable only from containers on its
+    # networks, which in practice means nginx. Not from your browser, not from
+    # curl on your host, not from your LAN. This mirrors Azure, where the API
+    # has internal-only ingress.
+
+  web:
+    profiles: ["full"]
+    build:
+      # Just the frontend folder; it needs nothing outside it.
+      context: src/frontend
+      dockerfile: Dockerfile
+      args:
+        # Compiled into the bundle at build time, so it has to be a build
+        # argument rather than a runtime variable. Public by design. Read from
+        # your shell or from a gitignored .env next to this file; empty is fine
+        # and simply means checkout will not load.
+        VITE_STRIPE_PUBLISHABLE_KEY: ${VITE_STRIPE_PUBLISHABLE_KEY:-}
+    image: knowledge-market-web:local
+    environment:
+      # Where nginx forwards /api/*, and what it sends as the Host header.
+      # In Azure these become the API container app's internal name.
+      API_UPSTREAM: api:8080
+      API_HOST: api
+      # Empty means "no Front Door in front of me", so direct requests are
+      # allowed. In Azure this is the Front Door profile's ID, and requests that
+      # did not come through it are refused.
+      FRONT_DOOR_ID: ""
+    ports:
+      # The ONLY published port in the whole stack.
+      - "8080:8080"
+    networks:
+      # Only the edge network. nginx can reach the API, and has no route to the
+      # database at all: from inside this container, the name "mssql" does not
+      # even resolve.
+      - edge
+    # Deliberately no depends_on the API. nginx serves the SPA from its own
+    # disk and does not need the API to do that, and it resolves the API's
+    # address per request. If the API is down the site still loads, and only
+    # /api/* calls fail — which is how it should degrade.
+
+# Two networks rather than compose's default single flat one, on which every
+# container could reach every other. Each service joins only what it needs:
+#
+#          edge                  data
+#   web ◄────────► api ◄────────────────► mssql
+#
+# This is the classic public / application / data split, and the local version
+# of what private endpoints and internal ingress do in Azure.
+networks:
+  edge:
+  data:
+
 volumes:
   mssqldata:
+  apistorage:
+  apicontent:

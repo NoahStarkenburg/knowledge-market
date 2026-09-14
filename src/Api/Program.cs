@@ -5,6 +5,8 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.RateLimiting;
 using Amazon.S3;
+using Azure.Identity;
+using Azure.Storage.Blobs;
 using Api.Authorization;
 using Api.Authorization.AccessService;
 using Api.Authorization.Handlers;
@@ -305,6 +307,30 @@ if (storageProvider == "s3")
     builder.Services.AddSingleton<Shared.Abstractions.IContentStorage, S3ContentStorage>();
     builder.Services.AddHostedService<S3BucketInitializer>();
 }
+else if (storageProvider == "azureblob")
+{
+    var blobConnectionString = builder.Configuration["Storage:AzureBlob:ConnectionString"];
+
+    builder.Services.AddSingleton(sp =>
+    {
+        // A connection string carries an account key, so it is only for Azurite, whose key is
+        // public. ProductionConfigValidator refuses one in Production.
+        if (!string.IsNullOrWhiteSpace(blobConnectionString))
+            return new BlobServiceClient(blobConnectionString);
+
+        // In Azure there is no key at all. DefaultAzureCredential finds the container app's managed
+        // identity (AZURE_CLIENT_ID picks which one), or your `az login` when run on a laptop.
+        var serviceUri = sp.GetRequiredService<IConfiguration>()["Storage:AzureBlob:ServiceUri"];
+        return new BlobServiceClient(new Uri(serviceUri!), new DefaultAzureCredential());
+    });
+
+    builder.Services.AddSingleton<AzureBlobSasSigner>();
+    builder.Services.AddScoped<Shared.Abstractions.IStorage, AzureBlobStorage>();
+    builder.Services.AddSingleton<Shared.Abstractions.IContentStorage, AzureBlobContentStorage>();
+
+    if (!string.IsNullOrWhiteSpace(blobConnectionString))
+        builder.Services.AddHostedService<AzureBlobEmulatorInitializer>();
+}
 else
 {
     builder.Services.AddSingleton<Shared.Abstractions.IContentStorage, LocalContentStorage>();
@@ -398,6 +424,10 @@ if (!string.IsNullOrWhiteSpace(redisConn))
 if (string.Equals(builder.Configuration["Storage:Provider"], "s3", StringComparison.OrdinalIgnoreCase))
 {
     healthChecks.AddCheck<Infrastructure.Storage.StorageHealthCheck>("storage", tags: ["storage", "ready"]);
+}
+else if (string.Equals(builder.Configuration["Storage:Provider"], "azureblob", StringComparison.OrdinalIgnoreCase))
+{
+    healthChecks.AddCheck<AzureBlobHealthCheck>("storage", tags: ["storage", "ready"]);
 }
 
 // MVC controllers (layered refactor). Registered alongside the minimal APIs so both run

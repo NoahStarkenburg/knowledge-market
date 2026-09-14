@@ -45,19 +45,26 @@ describe("apiClient token refresh", () => {
   });
 });
 
-describe("apiClient.uploadFile direct-to-S3", () => {
-  it("presigns, PUTs straight to S3, then confirms (no proxy)", async () => {
+describe("apiClient.uploadFile direct upload", () => {
+  it("presigns, PUTs straight to storage with the server's headers, then confirms (no proxy)", async () => {
     const dto = { id: "cf-1", fileTitle: "clip.mp4", mimeType: "video/mp4", fileSize: 10, storageKey: "staged/u/g/clip.mp4" };
+    const storageHeaders = { "x-ms-blob-type": "BlockBlob", "Content-Type": "video/mp4" };
     const calls: string[] = [];
+    let putHeaders: HeadersInit | undefined;
 
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === "string" ? input : input.toString();
       calls.push(`${init?.method ?? "GET"} ${url}`);
 
       if (url.endsWith("/api/uploads/presign")) {
-        return Promise.resolve(makeResp(200, { mode: "s3", uploadUrl: "http://s3.local/put", key: "staged/u/g/clip.mp4" }));
+        return Promise.resolve(makeResp(200, {
+          mode: "direct", uploadUrl: "http://blob.local/put", key: "staged/u/g/clip.mp4", headers: storageHeaders,
+        }));
       }
-      if (url === "http://s3.local/put") return Promise.resolve(makeResp(200));
+      if (url === "http://blob.local/put") {
+        putHeaders = init?.headers;
+        return Promise.resolve(makeResp(201));
+      }
       if (url.endsWith("/api/uploads/confirm")) return Promise.resolve(makeResp(200, dto));
       return Promise.resolve(makeResp(500));
     });
@@ -67,7 +74,8 @@ describe("apiClient.uploadFile direct-to-S3", () => {
     const result = await apiClient.uploadFile("course-1", file);
 
     expect(result).toEqual(dto);
-    expect(calls).toContain("PUT http://s3.local/put");
+    expect(calls).toContain("PUT http://blob.local/put");
+    expect(putHeaders).toEqual(storageHeaders);
     expect(calls.some((c) => c.includes("/lessons/upload"))).toBe(false);
   });
 
@@ -79,7 +87,7 @@ describe("apiClient.uploadFile direct-to-S3", () => {
       const url = typeof input === "string" ? input : input.toString();
       calls.push(url);
       if (url.endsWith("/api/uploads/presign")) {
-        return Promise.resolve(makeResp(200, { mode: "proxy", uploadUrl: null, key: null }));
+        return Promise.resolve(makeResp(200, { mode: "proxy", uploadUrl: null, key: null, headers: null }));
       }
       if (url.endsWith("/lessons/upload")) return Promise.resolve(makeResp(200, dto));
       return Promise.resolve(makeResp(500));

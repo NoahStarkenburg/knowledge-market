@@ -25,8 +25,8 @@ public sealed class UploadService(
 
         var presigned = await storage.TryCreateUploadUrlAsync(userId, req.FileName, mime, ct);
         return presigned is null
-            ? new PresignResponse("proxy", null, null)
-            : new PresignResponse("s3", presigned.Url, presigned.Key);
+            ? new PresignResponse("proxy", null, null, null)
+            : new PresignResponse("direct", presigned.Url, presigned.Key, presigned.Headers);
     }
 
     public async Task<UploadFileResponse> ConfirmAsync(Guid userId, ConfirmRequest req, CancellationToken ct)

@@ -104,7 +104,8 @@ namespace Infrastructure.Storage
             };
 
             var url = _presignS3.GetPreSignedURL(req);
-            return Task.FromResult<PresignedUpload?>(new PresignedUpload(url, key));
+            var headers = new Dictionary<string, string> { ["Content-Type"] = mime };
+            return Task.FromResult<PresignedUpload?>(new PresignedUpload(url, key, headers));
         }
 
         public async Task<long?> TryGetObjectSizeAsync(string key, CancellationToken ct)

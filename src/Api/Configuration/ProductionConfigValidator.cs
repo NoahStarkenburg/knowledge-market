@@ -27,6 +27,19 @@ public static class ProductionConfigValidator
         Check(cfg["Cors:FrontendOrigin"], "Cors:FrontendOrigin", minLength: 8, problems);
         Check(cfg.GetConnectionString("Default"), "ConnectionStrings:Default", minLength: 20, problems);
 
+        // A container's disk is disposable and per-replica: with local storage every upload and
+        // lesson body would vanish on the next deploy or restart.
+        var storageProvider = cfg["Storage:Provider"] ?? "local";
+        if (storageProvider == "local")
+            problems.Add("Storage:Provider is 'local'; use 's3' or 'azureblob' so files survive restarts");
+        if (storageProvider == "azureblob")
+        {
+            Check(cfg["Storage:AzureBlob:ServiceUri"], "Storage:AzureBlob:ServiceUri", minLength: 12, problems);
+            // A connection string means an account key. Production authenticates as a managed identity.
+            if (!string.IsNullOrWhiteSpace(cfg["Storage:AzureBlob:ConnectionString"]))
+                problems.Add("Storage:AzureBlob:ConnectionString is for the local emulator only; use ServiceUri with a managed identity");
+        }
+
         // Stripe is required in Production unless explicitly opted out with Stripe:Disabled=true.
         // This prevents a silent "deployed without Stripe" failure mode where the API boots but
         // checkout endpoints would throw 500 at runtime.

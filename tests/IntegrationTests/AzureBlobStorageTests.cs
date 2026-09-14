@@ -116,6 +116,37 @@ public sealed class AzureBlobStorageTests(ApiFactory factory) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Signed_read_serves_the_validated_type_not_the_uploaded_one()
+    {
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ContentDbContext>();
+        var storage = new AzureBlobStorage(_service, new AzureBlobSasSigner(_service, _cfg), db, _cfg);
+        var userId = Guid.NewGuid();
+
+        var upload = await storage.TryCreateUploadUrlAsync(userId, "photo.png", "image/png", CancellationToken.None);
+        Assert.NotNull(upload);
+
+        // A hostile client ignores the headers it was given and uploads a web page instead.
+        var put = new HttpRequestMessage(HttpMethod.Put, upload.Url)
+        {
+            Content = new StringContent("<script>alert(1)</script>", Encoding.UTF8, "text/html"),
+        };
+        put.Headers.TryAddWithoutValidation("x-ms-blob-type", "BlockBlob");
+        Assert.Equal(HttpStatusCode.Created, (await Http.SendAsync(put)).StatusCode);
+
+        // The API recorded the type it validated at confirm time.
+        var file = new ContentFile(userId, upload.Key, "photo.png", 25, "image/png");
+        db.ContentFiles.Add(file);
+        await db.SaveChangesAsync();
+
+        var readUrl = await storage.TryGetSignedReadUrl(file.Id, new SignedReadOptions { Disposition = "inline" }, CancellationToken.None);
+        var get = await Http.GetAsync(readUrl);
+
+        Assert.Equal(HttpStatusCode.OK, get.StatusCode);
+        Assert.Equal("image/png", get.Content.Headers.ContentType?.MediaType);
+    }
+
+    [Fact]
     public async Task Upload_without_blob_type_header_is_rejected()
     {
         using var scope = factory.Services.CreateScope();

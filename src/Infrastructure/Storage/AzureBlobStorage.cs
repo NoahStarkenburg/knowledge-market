@@ -102,8 +102,12 @@ public sealed class AzureBlobStorage(
 
     public async Task<string?> TryGetSignedReadUrl(Guid contentFileId, SignedReadOptions options, CancellationToken ct)
     {
-        var key = await FindKeyAsync(contentFileId, ct);
-        if (key is null) return null;
+        var file = await db.ContentFiles.AsNoTracking()
+            .Where(f => f.Id == contentFileId)
+            .Select(f => new { f.StorageKey, f.MimeType })
+            .FirstOrDefaultAsync(ct);
+        if (file is null) return null;
+        var key = file.StorageKey;
 
         var url = await signer.SignAsync(_container.GetBlobClient(key), BlobSasPermissions.Read, options.Expires, sas =>
         {
@@ -115,8 +119,12 @@ public sealed class AzureBlobStorage(
                 FileNameStar = options.FileName ?? Path.GetFileName(key),
             }.ToString();
 
-            if (options.ResponseContentType is not null)
-                sas.ContentType = options.ResponseContentType;
+            // Always name the type. The browser chose the blob's stored Content-Type when it uploaded,
+            // and a SAS cannot restrict it (an S3 presigned URL can), so a file confirmed as image/png
+            // but uploaded as text/html would otherwise be served as a web page. The database holds the
+            // type the API validated.
+            sas.ContentType = options.ResponseContentType
+                ?? (string.IsNullOrWhiteSpace(file.MimeType) ? "application/octet-stream" : file.MimeType);
         }, ct);
 
         return url.ToString();

@@ -74,6 +74,47 @@ describe('ApiService', () => {
     backend.expectNone('/api/uploads/confirm');
   });
 
+  it('reports a rejected confirm instead of uploading a second time', async () => {
+    const result = api.uploadFile('c1', file);
+
+    backend.expectOne('/api/uploads/presign').flush({ mode: 'direct', uploadUrl: 'https://blob.test/k', key: 'k', headers: {} });
+    (await vi.waitFor(() => backend.expectOne('/api/uploads/confirm'))).flush(
+      { detail: 'file too large' },
+      { status: 400, statusText: 'Bad Request' },
+    );
+
+    await expect(result).rejects.toMatchObject({ status: 400, detail: 'file too large' });
+    backend.expectNone('/api/courses/c1/lessons/upload');
+  });
+
+  it('uploads a course thumbnail straight to storage and confirms it for that course', async () => {
+    const image = new File(['png'], 'cover.png', { type: 'image/png' });
+    const result = api.uploadCourseThumbnail('c1', image);
+
+    backend.expectOne('/api/uploads/presign').flush({ mode: 'direct', uploadUrl: 'https://blob.test/t', key: 'staged/u/g/cover.png', headers: {} });
+
+    const confirm = await vi.waitFor(() => backend.expectOne('/api/courses/c1/thumbnail/confirm'));
+    expect(confirm.request.body).toEqual({ key: 'staged/u/g/cover.png', fileName: 'cover.png', contentType: 'image/png' });
+    confirm.flush({ thumbnailFileId: 'f-1' });
+
+    expect(await result).toEqual({ thumbnailFileId: 'f-1' });
+    expect(storagePut).toHaveBeenCalledWith('https://blob.test/t', expect.objectContaining({ method: 'PUT', body: image }));
+  });
+
+  it('uploads an intro video through the API when storage cannot presign', async () => {
+    const video = new File(['mp4'], 'intro.mp4', { type: 'video/mp4' });
+    const result = api.uploadCourseIntroVideo('c1', video);
+
+    backend.expectOne('/api/uploads/presign').flush({ mode: 'proxy', uploadUrl: null, key: null, headers: null });
+
+    const multipart = await vi.waitFor(() => backend.expectOne('/api/courses/c1/intro-video'));
+    expect(multipart.request.method).toBe('PUT');
+    expect(multipart.request.body).toBeInstanceOf(FormData);
+    multipart.flush({ introVideoFileId: 'v-1' });
+
+    expect(await result).toEqual({ introVideoFileId: 'v-1' });
+  });
+
   it('turns an HTTP error into an ApiError', async () => {
     const course = api.getCourse('missing');
     backend.expectOne('/api/courses/missing').flush({ title: 'Not found', detail: 'No such course' }, { status: 404, statusText: 'Not Found' });

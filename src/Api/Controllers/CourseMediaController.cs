@@ -1,4 +1,4 @@
-﻿using Api.Authorization;
+using Api.Authorization;
 using Application.Abstractions;
 using Shared.Abstractions;
 using Application.Uploads;
@@ -8,8 +8,11 @@ using Microsoft.AspNetCore.RateLimiting;
 
 namespace Api.Controllers;
 
-// Course thumbnail and intro-video: creator uploads (multipart) and public-ish serving
-// (streamed or presigned). File I/O stays in the controller; persistence is delegated.
+// Course thumbnail and intro-video: creator uploads and public-ish serving (streamed or presigned).
+//
+// Uploads normally go straight to storage: the browser calls /api/uploads/presign, PUTs the bytes
+// to the returned URL, then calls the confirm endpoints here. The multipart PUT endpoints remain
+// for storage that cannot presign (local disk) and as the fallback when a direct PUT fails.
 [ApiController]
 [Route("api/courses/{id:guid}")]
 [Authorize]
@@ -18,6 +21,28 @@ public sealed class CourseMediaController(
     ICurrentUser currentUser,
     IStorage storage) : ControllerBase
 {
+    [HttpPost("thumbnail/confirm")]
+    [EnableRateLimiting("upload")]
+    public async Task<IActionResult> ConfirmThumbnail(Guid id, [FromBody] ConfirmRequest req, CancellationToken ct)
+    {
+        var userId = await currentUser.GetRequiredUserIdAsync(ct);
+        if (userId == Guid.Empty) return Unauthorized();
+
+        var thumbnailFileId = await uploads.ConfirmThumbnailAsync(id, userId, req, ct);
+        return Ok(new { thumbnailFileId });
+    }
+
+    [HttpPost("intro-video/confirm")]
+    [EnableRateLimiting("upload")]
+    public async Task<IActionResult> ConfirmIntroVideo(Guid id, [FromBody] ConfirmRequest req, CancellationToken ct)
+    {
+        var userId = await currentUser.GetRequiredUserIdAsync(ct);
+        if (userId == Guid.Empty) return Unauthorized();
+
+        var introVideoFileId = await uploads.ConfirmIntroVideoAsync(id, userId, req, ct);
+        return Ok(new { introVideoFileId });
+    }
+
     [HttpPut("thumbnail")]
     [EnableRateLimiting("upload")]
     [Consumes("multipart/form-data")]
@@ -33,12 +58,11 @@ public sealed class CourseMediaController(
         if (file is null || file.Length <= 0)
             return BadRequest(new { error = "Missing image file." });
 
-        const long maxBytes = 5L * 1024 * 1024; // 5 MB
-        if (file.Length > maxBytes)
+        if (file.Length > UploadLimits.ThumbnailBytes)
             return BadRequest(new { error = "Image must be 5 MB or smaller." });
 
         var mime = string.IsNullOrWhiteSpace(file.ContentType) ? "" : file.ContentType.ToLowerInvariant();
-        if (mime is not ("image/jpeg" or "image/png" or "image/webp" or "image/gif"))
+        if (!UploadMimeTypes.IsThumbnail(mime))
             return BadRequest(new { error = "Only JPEG, PNG, WebP, or GIF images are accepted." });
 
         await using var stream = file.OpenReadStream();
@@ -52,6 +76,10 @@ public sealed class CourseMediaController(
     [HttpPut("intro-video")]
     [EnableRateLimiting("upload")]
     [Consumes("multipart/form-data")]
+    // Kestrel caps request bodies at about 28.6 MB and multipart bodies at 128 MB by default, so
+    // without raising both here the 500 MB limit below could never actually be reached.
+    [RequestSizeLimit(UploadLimits.IntroVideoBytes + UploadLimits.MultipartOverheadBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = UploadLimits.IntroVideoBytes + UploadLimits.MultipartOverheadBytes)]
     public async Task<IActionResult> UploadIntroVideo(Guid id, IFormFile file, CancellationToken ct)
     {
         var userId = await currentUser.GetRequiredUserIdAsync(ct);
@@ -64,12 +92,11 @@ public sealed class CourseMediaController(
         if (file is null || file.Length <= 0)
             return BadRequest(new { error = "Missing video file." });
 
-        const long maxBytes = 500L * 1024 * 1024; // 500 MB
-        if (file.Length > maxBytes)
+        if (file.Length > UploadLimits.IntroVideoBytes)
             return BadRequest(new { error = "Video must be 500 MB or smaller." });
 
         var mime = string.IsNullOrWhiteSpace(file.ContentType) ? "" : file.ContentType.ToLowerInvariant();
-        if (!mime.StartsWith("video/"))
+        if (!UploadMimeTypes.IsVideo(mime))
             return BadRequest(new { error = "Only video files are accepted." });
 
         await using var stream = file.OpenReadStream();

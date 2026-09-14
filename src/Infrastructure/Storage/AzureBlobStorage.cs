@@ -67,6 +67,9 @@ public sealed class AzureBlobStorage(
         }
     }
 
+    public Task DeleteObjectAsync(string key, CancellationToken ct) =>
+        _container.GetBlobClient(key).DeleteIfExistsAsync(cancellationToken: ct);
+
     public async Task<Stream> OpenReadAsync(Guid contentFileId, CancellationToken ct)
     {
         var key = await FindKeyAsync(contentFileId, ct)

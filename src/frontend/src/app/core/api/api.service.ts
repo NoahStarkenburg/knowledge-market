@@ -323,28 +323,35 @@ export class ApiService {
     return this.req(this.http.delete<void>(`/api/courses/${courseId}/lessons/${lessonId}/assets/${assetId}`));
   }
 
-  // Prefers a direct PUT to object storage (an Azure SAS URL or an S3 presigned URL); falls back
-  // to a multipart upload through the API when storage can't presign or the PUT fails.
-  async uploadFile(courseId: string, file: File): Promise<ContentFileDto> {
+  // Direct upload to object storage: presign, PUT the bytes straight to storage (an Azure SAS URL
+  // or an S3 presigned URL), then confirm with the API. Resolves null when storage cannot take the
+  // bytes directly (no presign support, or the PUT failed), so the caller falls back to a multipart
+  // upload through the API. API errors, such as "file too large" on confirm, are real answers and
+  // are thrown rather than retried another way.
+  private async uploadDirect<T>(file: File, confirm: (req: ConfirmUploadRequest) => Promise<T>): Promise<T | null> {
     const contentType = file.type || 'application/octet-stream';
+    const presign = await this.presignUpload({ fileName: file.name, contentType });
+    if (presign.mode !== 'direct' || !presign.uploadUrl || !presign.key) return null;
+
     try {
-      const presign = await this.presignUpload({ fileName: file.name, contentType });
-      if (presign.mode === 'direct' && presign.uploadUrl && presign.key) {
-        // Bare fetch: straight to storage, not our API, so no cookies or CSRF. The server names
-        // the headers the store requires; Azure rejects a PUT without x-ms-blob-type.
-        const put = await fetch(presign.uploadUrl, {
-          method: 'PUT',
-          headers: presign.headers ?? { 'Content-Type': contentType },
-          body: file,
-        });
-        if (put.ok) {
-          return await this.confirmUpload({ key: presign.key, fileName: file.name, contentType });
-        }
-      }
+      // Bare fetch: straight to storage, not our API, so no cookies or CSRF. The server names the
+      // headers the store requires; Azure rejects a PUT without x-ms-blob-type.
+      const put = await fetch(presign.uploadUrl, {
+        method: 'PUT',
+        headers: presign.headers ?? { 'Content-Type': contentType },
+        body: file,
+      });
+      if (!put.ok) return null;
     } catch {
-      // fall through to the proxied upload
+      // Storage unreachable (network or CORS). The path through the API may still work.
+      return null;
     }
-    return this.uploadFileMultipart(courseId, file);
+
+    return confirm({ key: presign.key, fileName: file.name, contentType });
+  }
+
+  async uploadFile(courseId: string, file: File): Promise<ContentFileDto> {
+    return (await this.uploadDirect(file, (req) => this.confirmUpload(req))) ?? this.uploadFileMultipart(courseId, file);
   }
 
   presignUpload(req: PresignUploadRequest): Promise<PresignUploadResponse> {
@@ -361,7 +368,13 @@ export class ApiService {
     return this.req(this.http.post<ContentFileDto>(`/api/courses/${courseId}/lessons/upload`, form));
   }
 
-  uploadCourseThumbnail(courseId: string, file: File): Promise<{ thumbnailFileId: string }> {
+  async uploadCourseThumbnail(courseId: string, file: File): Promise<{ thumbnailFileId: string }> {
+    const confirm = (req: ConfirmUploadRequest) =>
+      this.req(this.http.post<{ thumbnailFileId: string }>(`/api/courses/${courseId}/thumbnail/confirm`, req));
+    return (await this.uploadDirect(file, confirm)) ?? this.uploadCourseThumbnailMultipart(courseId, file);
+  }
+
+  private uploadCourseThumbnailMultipart(courseId: string, file: File): Promise<{ thumbnailFileId: string }> {
     const form = new FormData();
     form.append('file', file);
     return this.req(this.http.put<{ thumbnailFileId: string }>(`/api/courses/${courseId}/thumbnail`, form));
@@ -371,7 +384,13 @@ export class ApiService {
     return `/api/courses/${courseId}/thumbnail`;
   }
 
-  uploadCourseIntroVideo(courseId: string, file: File): Promise<{ introVideoFileId: string }> {
+  async uploadCourseIntroVideo(courseId: string, file: File): Promise<{ introVideoFileId: string }> {
+    const confirm = (req: ConfirmUploadRequest) =>
+      this.req(this.http.post<{ introVideoFileId: string }>(`/api/courses/${courseId}/intro-video/confirm`, req));
+    return (await this.uploadDirect(file, confirm)) ?? this.uploadCourseIntroVideoMultipart(courseId, file);
+  }
+
+  private uploadCourseIntroVideoMultipart(courseId: string, file: File): Promise<{ introVideoFileId: string }> {
     const form = new FormData();
     form.append('file', file);
     return this.req(this.http.put<{ introVideoFileId: string }>(`/api/courses/${courseId}/intro-video`, form));

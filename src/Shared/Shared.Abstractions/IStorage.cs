@@ -31,4 +31,8 @@ public interface IStorage
     // HEAD an object by key to read its real size; null if it doesn't exist.
     // Used to confirm a direct upload landed before recording it.
     Task<long?> TryGetObjectSizeAsync(string key, CancellationToken ct);
+
+    // Delete an object by key, if it exists. Used to discard a direct upload that fails
+    // validation on confirm, before any database row points at it.
+    Task DeleteObjectAsync(string key, CancellationToken ct);
 }

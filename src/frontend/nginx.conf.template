@@ -1,0 +1,199 @@
+# nginx site config for the SPA — a TEMPLATE, not a finished config.
+#
+# At container start, the nginx image renders this file into
+# /etc/nginx/conf.d/default.conf, replacing each ${NAME} with that environment
+# variable. Only variables that are actually set get replaced, which is why
+# nginx's own $uri, $host and friends pass through untouched — and why the
+# Dockerfile gives every ${NAME} below a default.
+#
+# One image, configured per environment by environment variables:
+#
+#   variable                  docker compose        Azure Container Apps
+#   ------------------------  --------------------  ---------------------------
+#   API_UPSTREAM              api:8080              knowledgemarket-api:80
+#   API_HOST                  api                   knowledgemarket-api
+#   FRONT_DOOR_ID             (empty — no check)    the Front Door profile's ID
+#   NGINX_LOCAL_RESOLVERS     set automatically from /etc/resolv.conf at start
+#
+# Three jobs:
+#   1. serve the built files off local disk
+#   2. forward /api/ to the API container
+#   3. set cache headers telling the BROWSER how long to keep each file
+#
+# nginx stores nothing itself. Caching here means response headers; Front Door
+# adds the second kind, keeping its own copies at edge locations, and reads
+# these same headers to decide for how long.
+
+
+# ---------------------------------------------------------------------------
+# Working out who the real client is
+# ---------------------------------------------------------------------------
+# A `map` computes a variable from another one. These sit outside `server`
+# because map is only allowed at http level, which is where conf.d files land.
+#
+# Front Door sets X-Azure-ClientIP to the address of the socket that connected
+# to it. Unlike X-Forwarded-For, a client cannot pre-seed it with a fake value.
+# When it is absent — local runs, no Front Door — fall back to the address that
+# connected to nginx.
+map $http_x_azure_clientip $client_ip {
+    ""      $remote_addr;
+    default $http_x_azure_clientip;
+}
+
+# Front Door and Container Apps terminate HTTPS before nginx, so nginx itself
+# only ever sees plain HTTP. They report the original scheme and host in these
+# headers; fall back to nginx's own view when they are not there.
+map $http_x_forwarded_proto $client_proto {
+    ""      $scheme;
+    default $http_x_forwarded_proto;
+}
+
+map $http_x_forwarded_host $client_host {
+    ""      $host;
+    default $http_x_forwarded_host;
+}
+
+# Was this request relayed by OUR Front Door?
+#
+# Front Door stamps every request with X-Azure-FDID, the ID of the profile that
+# relayed it. Without this check anyone who finds the container's own address
+# can call it directly and skip the CDN, the WAF and the edge rate limits.
+# Checking the ID rather than merely the header's presence matters: another
+# customer's Front Door would also send the header, with its own ID.
+#
+# With FRONT_DOOR_ID empty (compose, local runs), the "" key matches requests
+# that carry no header at all, so the check allows everything.
+map $http_x_azure_fdid $from_front_door {
+    default              0;
+    "${FRONT_DOOR_ID}"   1;
+}
+
+
+server {
+    # 8080, not 80: ports below 1024 need root, and this container is not root.
+    listen 8080;
+    server_name _;
+
+    # Where the files from `COPY --from=build` live inside this image.
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Baseline security headers.
+    #
+    # nginx gotcha worth knowing: add_header is inherited by a location block
+    # ONLY if that block declares no add_header of its own. The blocks below
+    # that set Cache-Control therefore lose these and re-declare what matters.
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    # Fixed response for the container health probe and Front Door's origin
+    # probe. Deliberately exempt from the Front Door check below: Container
+    # Apps probes the container directly, without passing through Front Door.
+    location = /healthz {
+        access_log off;
+        add_header Content-Type text/plain;
+        return 200 "ok";
+    }
+
+    # ----- the API ---------------------------------------------------------
+    location /api/ {
+        # `if` is safe here because it only returns. The same check appears in
+        # every location except /healthz; putting it at server level would run
+        # before location matching and block the health probe too.
+        if ($from_front_door = 0) { return 403; }
+
+        # Resolve the upstream on every request rather than once at startup.
+        #
+        # With a literal `proxy_pass http://api:8080`, nginx resolves the name
+        # when it loads the config and caches that IP for the life of the
+        # process. Two consequences, both bad:
+        #   1. nginx refuses to START if the API is not up yet
+        #      ("host not found in upstream"), so startup order matters
+        #   2. if the API restarts with a new IP, nginx keeps using the old one
+        #      and every request 502s until nginx itself restarts
+        # Putting the host in a variable defers resolution to request time.
+        #
+        # NGINX_LOCAL_RESOLVERS is filled in at startup from /etc/resolv.conf,
+        # so it is Docker's embedded DNS (127.0.0.11) under compose and the
+        # environment's own DNS server in Container Apps. Hardcoding 127.0.0.11
+        # would work locally and fail in Azure, where that server does not exist.
+        resolver ${NGINX_LOCAL_RESOLVERS} valid=10s ipv6=off;
+        set $api_upstream "${API_UPSTREAM}";
+
+        # No path after the variable, so the original URI is forwarded intact:
+        # /api/courses -> http://<upstream>/api/courses. A trailing slash here
+        # would strip the /api prefix and every call would 404.
+        proxy_pass http://$api_upstream;
+        proxy_http_version 1.1;
+
+        # Host must be the API's OWN name. Container Apps' internal ingress
+        # routes by Host header: forward the public hostname and it cannot tell
+        # which app the request is for. The public hostname travels separately
+        # in X-Client-Host.
+        proxy_set_header Host ${API_HOST};
+
+        # The real client, resolved above. Custom header names rather than
+        # X-Forwarded-*, because Container Apps' ingress proxy sits between nginx
+        # and the API and rewrites the standard ones on the way through. The API
+        # reads these via ForwardedHeadersOptions — see Program.cs.
+        proxy_set_header X-Client-IP    $client_ip;
+        proxy_set_header X-Client-Proto $client_proto;
+        proxy_set_header X-Client-Host  $client_host;
+
+        # No proxy_cache. API responses are per-user and authenticated; caching
+        # one would eventually serve one user's data to another.
+    }
+
+    # ----- hashed assets ---------------------------------------------------
+    # Vite names these from a hash of their contents, so index-D1SKo0fw.js can
+    # never return different bytes — change the file and the NAME changes.
+    # That makes a one-year cache safe: there is no such thing as a stale
+    # response, only a filename that no longer exists.
+    #
+    # `immutable` additionally tells the browser not to revalidate on reload.
+    location /assets/ {
+        if ($from_front_door = 0) { return 403; }
+
+        # Set Cache-Control once, explicitly. Using nginx's `expires 1y`
+        # directive as well would emit a SECOND Cache-Control header; browsers
+        # merge them, but two headers saying the same thing is noise.
+        add_header Cache-Control "public, max-age=31536000, immutable";
+        # Re-declared because the add_header above suppressed inheritance, and
+        # nosniff genuinely matters for scripts and stylesheets.
+        add_header X-Content-Type-Options "nosniff" always;
+        try_files $uri =404;
+    }
+
+    # ----- the app shell ---------------------------------------------------
+    # index.html names which hashed files to load. Cache it and a deploy leaves
+    # browsers asking for an asset that no longer exists — a blank page until
+    # the cache expires. no-cache does not mean "do not store"; it means "ask
+    # before reusing", which is a cheap 304 and always correct.
+    location = /index.html {
+        if ($from_front_door = 0) { return 403; }
+
+        add_header Cache-Control "no-store, no-cache, must-revalidate";
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "SAMEORIGIN" always;
+    }
+
+    # ----- everything else -------------------------------------------------
+    # The SPA fallback. React Router invents URLs like /courses/abc-123 that
+    # match no file on disk, so a hard refresh would 404. try_files says: try
+    # it as a file, then as a directory, then give up and serve index.html —
+    # which boots the app, which reads the URL and renders the right page.
+    #
+    # This is the exact rule ASP.NET spells MapFallbackToFile("index.html").
+    location / {
+        if ($from_front_door = 0) { return 403; }
+
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Text compresses roughly 3-4x. Below ~1KB the header overhead is not worth
+    # it. Images and fonts are already compressed, so they are left alone.
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript application/xml image/svg+xml;
+    gzip_min_length 1024;
+}

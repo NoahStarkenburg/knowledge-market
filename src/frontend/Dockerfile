@@ -45,6 +45,25 @@ RUN npm ci
 # (@rollup/rollup-win32-x64-msvc) that would break this Linux build.
 COPY . .
 
+# Public, per-deployment values Vite compiles into the bundle.
+#
+# Vite does not read these at run time: it text-substitutes every
+# import.meta.env.VITE_* during `npm run build`, so they have to exist NOW, as
+# build arguments. Every one of them is public by design — a Stripe PUBLISHABLE
+# key and an OAuth client ID identify the app, they do not authorize anything —
+# so it is fine that they end up readable in the shipped JavaScript. A secret
+# must never be passed this way: build args are visible in `docker history`.
+#
+#     docker build --build-arg VITE_STRIPE_PUBLISHABLE_KEY=pk_test_... ...
+#
+# Declared here, just before the build, rather than at the top of the stage:
+# changing one only invalidates the layers after it, so npm ci stays cached.
+ARG VITE_STRIPE_PUBLISHABLE_KEY=""
+ARG VITE_GOOGLE_AUTH="false"
+ARG VITE_GOOGLE_CLIENT_ID=""
+ARG VITE_GOOGLE_API_KEY=""
+ENV VITE_STRIPE_PUBLISHABLE_KEY=$VITE_STRIPE_PUBLISHABLE_KEY     VITE_GOOGLE_AUTH=$VITE_GOOGLE_AUTH     VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID     VITE_GOOGLE_API_KEY=$VITE_GOOGLE_API_KEY
+
 # Runs `tsc -b && vite build`. A TypeScript error fails the image build, which
 # is what you want. Output lands in /app/dist: index.html plus one content
 # hashed .js and .css.
@@ -60,8 +79,21 @@ RUN npm run build
 # there is no chown dance and nothing runs as root.
 FROM nginxinc/nginx-unprivileged:1.27-alpine AS runtime
 
-# Routing, caching and proxy rules. Replaces the image's default site config.
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Routing, caching and proxy rules, as a TEMPLATE. The image renders every file
+# in /etc/nginx/templates at startup, substituting environment variables, and
+# writes the result over /etc/nginx/conf.d/default.conf. That is what lets one
+# image run under compose and in Azure with different upstreams.
+COPY nginx.conf.template /etc/nginx/templates/default.conf.template
+
+# Defaults for every ${NAME} in the template. They matter: the render step only
+# replaces variables that are SET, so an unset one would be left in the config
+# as literal "${NAME}" text. These values are the compose ones; Azure overrides
+# them on the container.
+#
+# NGINX_ENTRYPOINT_LOCAL_RESOLVERS turns on a startup script that reads the DNS
+# server from /etc/resolv.conf into NGINX_LOCAL_RESOLVERS, so the resolver is
+# correct in whichever environment the container lands in.
+ENV NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1     API_UPSTREAM=api:8080     API_HOST=api     FRONT_DOOR_ID=
 
 # The whole point of stage 1. --from=build reads from that stage's filesystem,
 # NOT from your machine — your local dist/ is excluded by .dockerignore and is

@@ -40,6 +40,9 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Serilog.Sinks.OpenTelemetry;
+using Azure.Monitor.OpenTelemetry.AspNetCore;
+using Microsoft.AspNetCore.HttpOverrides;
+using OpenTelemetry.Instrumentation.AspNetCore;
 using Api.Observability;
 using Shared.Kernel;
 using Infrastructure.Cart;
@@ -99,13 +102,28 @@ builder.Host.UseSerilog((ctx, svc, cfg) =>
     }
 });
 
-// OpenTelemetry: distributed traces + application/runtime metrics, exported over OTLP
-// to the collector (Grafana Tempo/Prometheus) when an endpoint is configured. The
-// exporter reads OTEL_EXPORTER_OTLP_ENDPOINT / OTEL_EXPORTER_OTLP_PROTOCOL from env.
+// OpenTelemetry: distributed traces + application/runtime metrics. Two destinations,
+// each switched on by the presence of its own setting, so nothing is exported locally:
+//   - OTLP to a collector (Grafana Tempo/Prometheus) when OTEL_EXPORTER_OTLP_ENDPOINT is set.
+//     The exporter reads OTEL_EXPORTER_OTLP_ENDPOINT / OTEL_EXPORTER_OTLP_PROTOCOL from env.
+//   - Azure Monitor (Application Insights) when APPLICATIONINSIGHTS_CONNECTION_STRING is set.
+// Both can run at once; the instrumentation is the same, only the exporters differ.
 var otlpEndpoint = builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"];
-if (!string.IsNullOrWhiteSpace(otlpEndpoint))
+var exportOtlp = !string.IsNullOrWhiteSpace(otlpEndpoint);
+var exportAzureMonitor = !string.IsNullOrWhiteSpace(builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"]);
+if (exportOtlp || exportAzureMonitor)
 {
-    builder.Services.AddOpenTelemetry()
+    // Configured once as options rather than inline, because the Azure Monitor distro
+    // registers its own ASP.NET Core instrumentation and reads these same options.
+    // Container probes hit /health every 30s. Left in, they bury real requests in every
+    // trace view and skew every span-metric derived from the trace stream.
+    builder.Services.Configure<AspNetCoreTraceInstrumentationOptions>(o =>
+    {
+        o.Filter = ctx => !ObservabilityDefaults.IsProbePath(ctx.Request.Path);
+        o.RecordException = true;
+    });
+
+    var telemetry = builder.Services.AddOpenTelemetry()
         .ConfigureResource(r => r
             .AddService(serviceName: ObservabilityDefaults.ServiceName, serviceVersion: ObservabilityDefaults.ServiceVersion)
             .AddAttributes(new Dictionary<string, object>
@@ -115,25 +133,77 @@ if (!string.IsNullOrWhiteSpace(otlpEndpoint))
                 ["deployment.environment"] = builder.Environment.EnvironmentName,
                 ["service.instance.id"] = Environment.MachineName,
             }))
-        .WithTracing(t => t
-            .AddAspNetCoreInstrumentation(o =>
+        .WithTracing(t =>
+        {
+            t.AddSource(AppDiagnostics.SourceName);  // our business spans (purchase, checkout, cache)
+
+            // The Azure Monitor distro already instruments ASP.NET Core, HttpClient and
+            // SqlClient. Registering them a second time would emit every span twice.
+            if (!exportAzureMonitor)
             {
-                // Container probes hit /health every 30s. Left in, they bury real requests
-                // in Tempo and skew every span-metric derived from the trace stream.
-                o.Filter = ctx => !ObservabilityDefaults.IsProbePath(ctx.Request.Path);
-                o.RecordException = true;
-            })
-            .AddHttpClientInstrumentation()
-            .AddSqlClientInstrumentation()          // a span per SQL query
-            .AddSource(AppDiagnostics.SourceName)   // our business spans (purchase, checkout, cache)
-            .AddOtlpExporter())
-        .WithMetrics(m => m
-            .AddAspNetCoreInstrumentation()
-            .AddHttpClientInstrumentation()
-            .AddRuntimeInstrumentation()
-            .AddSqlClientInstrumentation()          // DB command duration metrics
-            .AddMeter(AppMetrics.MeterName)         // our business metrics
-            .AddOtlpExporter());
+                t.AddAspNetCoreInstrumentation()
+                 .AddHttpClientInstrumentation()
+                 .AddSqlClientInstrumentation();     // a span per SQL query
+            }
+
+            if (exportOtlp) t.AddOtlpExporter();
+        })
+        .WithMetrics(m =>
+        {
+            m.AddRuntimeInstrumentation()             // GC, thread pool, exceptions
+             .AddMeter(AppMetrics.MeterName);         // our business metrics
+
+            if (!exportAzureMonitor)
+            {
+                m.AddAspNetCoreInstrumentation()
+                 .AddHttpClientInstrumentation()
+                 .AddSqlClientInstrumentation();     // DB command duration metrics
+            }
+
+            if (exportOtlp) m.AddOtlpExporter();
+        });
+
+    // Reads APPLICATIONINSIGHTS_CONNECTION_STRING itself. Logs are deliberately not routed
+    // here: Serilog already writes JSON to stdout, and Container Apps ships stdout to Log
+    // Analytics, so sending them to Application Insights as well would pay for them twice.
+    if (exportAzureMonitor) telemetry.UseAzureMonitor();
+}
+
+// ---------------- Forwarded headers ----------------
+// Behind nginx, every request reaches this API from nginx's address, over plain HTTP, with
+// nginx's idea of the Host. Left alone that breaks three things:
+//   - rate limiting partitions by RemoteIpAddress, so every visitor shares ONE bucket and a
+//     single user's failed logins lock everybody out
+//   - Request.Scheme is "http", so anything building an absolute URL builds the wrong one
+//   - Request.Host is the internal container name rather than the public hostname
+//
+// nginx works out the real values and sends them in X-Client-* headers. Custom names rather
+// than the standard X-Forwarded-*, because Azure Container Apps' own ingress proxy sits
+// between nginx and this API and rewrites X-Forwarded-For/-Proto on the way through.
+//
+// Trusting these headers is only safe because nothing but nginx can reach this API: in
+// compose it publishes no port, and in Azure it has internal-only ingress. That is why it is
+// off by default: `dotnet run` exposes :5116 directly, and there anyone could forge them.
+var forwardedHeadersEnabled = builder.Configuration.GetValue<bool>("ForwardedHeaders:Enabled");
+if (forwardedHeadersEnabled)
+{
+    builder.Services.Configure<ForwardedHeadersOptions>(o =>
+    {
+        o.ForwardedHeaders = ForwardedHeaders.XForwardedFor
+                           | ForwardedHeaders.XForwardedProto
+                           | ForwardedHeaders.XForwardedHost;
+        o.ForwardedForHeaderName = "X-Client-IP";
+        o.ForwardedProtoHeaderName = "X-Client-Proto";
+        o.ForwardedHostHeaderName = "X-Client-Host";
+
+        // nginx sends exactly one value per header, already resolved.
+        o.ForwardLimit = 1;
+
+        // By default only loopback proxies are trusted, which would ignore nginx entirely.
+        // The network boundary described above is what makes clearing these acceptable.
+        o.KnownNetworks.Clear();
+        o.KnownProxies.Clear();
+    });
 }
 
 // Business metrics (signups, logins, orders, payments, cache) on the KnowledgeMarket meter.
@@ -552,6 +622,13 @@ var app = builder.Build();
 
 // ---------------- Pipeline ----------------
 
+// First, so everything after it (security headers, request logging, rate limiting) sees
+// the real client IP, scheme and host instead of nginx's.
+if (forwardedHeadersEnabled)
+{
+    app.UseForwardedHeaders();
+}
+
 // Security headers (non-development). TLS terminates at the load balancer / App Runner,
 // so HSTS is emitted here for the browser; a Content-Security-Policy belongs on the SPA's
 // CDN (CloudFront), where the HTML is served.
@@ -750,17 +827,23 @@ app.MapGet("/api/debug/me", (HttpContext ctx) =>
 app.MapHealthChecks("/health", new HealthCheckOptions { Predicate = _ => false }).AllowAnonymous();
 
 // Readiness: should this instance receive traffic? Only "ready"-tagged dependencies count.
+// Anonymous, because the platform's readiness probe carries no credentials, so it must not
+// return exception text. A failed SQL connection message can name servers and databases.
 app.MapHealthChecks("/health/ready", new HealthCheckOptions
 {
     Predicate = c => c.Tags.Contains("ready"),
-    ResponseWriter = WriteHealthJson
+    ResponseWriter = (ctx, report) => WriteHealthJson(ctx, report, includeErrors: false)
 }).AllowAnonymous();
 
-// Everything, including non-gating checks like Redis. For humans and dashboards.
-app.MapHealthChecks("/health/details", new HealthCheckOptions { ResponseWriter = WriteHealthJson })
-    .AllowAnonymous();
+// Everything, including non-gating checks like Redis, WITH error messages. For a human
+// debugging, so it requires an admin. Today this path is not routed publicly at all (nginx
+// only forwards /api/*), but relying on routing alone means one proxy change would expose it.
+app.MapHealthChecks("/health/details", new HealthCheckOptions
+{
+    ResponseWriter = (ctx, report) => WriteHealthJson(ctx, report, includeErrors: true)
+}).RequireAuthorization("role:admin");
 
-static Task WriteHealthJson(HttpContext ctx, HealthReport report)
+static Task WriteHealthJson(HttpContext ctx, HealthReport report, bool includeErrors)
 {
     ctx.Response.ContentType = "application/json";
     return ctx.Response.WriteAsJsonAsync(new
@@ -773,7 +856,7 @@ static Task WriteHealthJson(HttpContext ctx, HealthReport report)
             status = e.Value.Status.ToString(),
             durationMs = e.Value.Duration.TotalMilliseconds,
             description = e.Value.Description,
-            error = e.Value.Exception?.Message,
+            error = includeErrors ? e.Value.Exception?.Message : null,
             tags = e.Value.Tags,
         })
     });

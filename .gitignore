@@ -101,3 +101,32 @@ playwright-report/
 *.sln.docstates
 .DS_Store
 Thumbs.db
+
+# ---------------------------------------------------------------------------
+# Terraform
+# ---------------------------------------------------------------------------
+# Downloaded provider plugins. Recreated by `terraform init`.
+.terraform/
+
+# State must NEVER be committed: it records every resource Terraform manages,
+# including any passwords and keys, in plaintext. It lives in the remote backend
+# (infra/backend.tf). These patterns catch an accidental local copy.
+*.tfstate
+*.tfstate.*
+
+# Saved plans also embed secret values.
+*.tfplan
+tfplan
+
+# Crash logs can contain sensitive values too.
+crash.log
+crash.*.log
+
+# Local overrides: for experiments on your own machine only.
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# NOTE: .terraform.lock.hcl is deliberately NOT ignored. Like package-lock.json,
+# it pins the exact provider builds so every machine and CI run uses the same ones.

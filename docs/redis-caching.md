@@ -59,7 +59,7 @@ Application.Abstractions.ICacheStore     <- the port (Get / Set / Remove + GetOr
 ## Seeing it work
 
 ```bash
-docker compose up -d postgres redis minio api      # redis:7-alpine as the km-redis service
+docker compose --profile full up -d --build        # the API uses the km-redis container
 
 # Cache-aside: first request is a miss (read + write + TTL), second is a pure hit (read only)
 docker exec km-redis redis-cli MONITOR
@@ -75,13 +75,31 @@ docker exec km-redis redis-cli EXISTS km:course:v1:<id>    # -> 0, next read rep
 
 # Stampede protection: 50 concurrent requests at a cold stats key -> ONE rebuild
 docker exec km-redis redis-cli DEL km:catalog:stats:v1
-seq 50 | xargs -P 50 -I{} curl -s -o /dev/null http://localhost:5116/api/catalog/stats
+seq 50 | xargs -P 50 -I{} curl -s -o /dev/null http://localhost:8080/api/catalog/stats
 #   MONITOR shows a single HMSET km:catalog:stats:v1 (one Postgres aggregate), ~51 HMGET
 ```
 
 > The .NET distributed-cache provider stores each entry as a Redis **hash** (`data` + `absexp` +
 > `sldexp` fields), which is why a plain `GET` returns `WRONGTYPE` — read the payload with
 > `HGET <key> data`. Keys are prefixed with `km:` (the configured `InstanceName`).
+
+## In Azure: Azure Managed Redis with Entra ID
+
+Locally the API connects to a plain Redis container (`Redis__ConnectionString=redis:6379`). In Azure
+it sets `Redis__Host=<name>.<region>.redis.azure.net:10000` instead, and there is **no password
+anywhere**:
+
+1. `RedisConnectionFactory` asks Entra ID for a token for the container app's managed identity
+   (`DefaultAzureCredential`; `AZURE_CLIENT_ID` picks the user-assigned identity).
+2. `Microsoft.Azure.StackExchangeRedis` connects over TLS, sends the identity's object id as the
+   Redis user name and the token as the password, and re-authenticates before the token expires.
+3. Redis checks that identity against an access policy assignment on the cache, created by
+   Terraform: the Redis counterpart of an RBAC role assignment.
+
+Access keys stay disabled on the cache, and `ProductionConfigValidator` refuses a Redis connection
+string that carries a password. One `IConnectionMultiplexer` is shared by the cache and the `redis`
+health check, which is how StackExchange.Redis is meant to be used: one long-lived connection per
+process.
 
 ## Trade-offs
 

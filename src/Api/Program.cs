@@ -241,14 +241,17 @@ builder.Services.AddDbContext<Infrastructure.Cart.CartDbContext>(opt =>
     opt.UseSqlServer(conn, b => b.MigrationsHistoryTable("__EFMigrationsHistory", "carts"));
 });
 
-// Distributed cache (Redis). Optional: when Redis:ConnectionString is set we wire the real
-// Redis-backed cache; otherwise a no-op store keeps the app running unchanged without Redis.
-var redisConnection = builder.Configuration["Redis:ConnectionString"];
-if (!string.IsNullOrWhiteSpace(redisConnection))
+// Distributed cache (Redis). Optional: when Redis is configured (a local connection string, or an
+// Azure Managed Redis host signed into with the managed identity) we wire the real Redis-backed
+// cache; otherwise a no-op store keeps the app running unchanged without Redis. The one connection
+// is shared by the cache and its health check below.
+var redis = await Infrastructure.Caching.RedisConnectionFactory.ConnectAsync(builder.Configuration);
+if (redis is not null)
 {
+    builder.Services.AddSingleton(redis);
     builder.Services.AddStackExchangeRedisCache(options =>
     {
-        options.Configuration = redisConnection;
+        options.ConnectionMultiplexerFactory = () => Task.FromResult(redis);
         options.InstanceName = "km:"; // key prefix, so this app's keys are easy to spot in redis-cli
     });
     builder.Services.AddSingleton<Shared.Abstractions.ICacheStore, Infrastructure.Caching.RedisCacheStore>();
@@ -415,10 +418,9 @@ else
 var healthChecks = builder.Services.AddHealthChecks()
     .AddSqlServer(builder.Configuration.GetConnectionString("Default")!, name: "sqlserver", tags: ["db", "ready"]);
 
-var redisConn = builder.Configuration["Redis:ConnectionString"];
-if (!string.IsNullOrWhiteSpace(redisConn))
+if (redis is not null)
 {
-    healthChecks.AddRedis(redisConn, name: "redis", tags: ["cache"]);
+    healthChecks.AddRedis(redis, name: "redis", tags: ["cache"]);
 }
 
 if (string.Equals(builder.Configuration["Storage:Provider"], "s3", StringComparison.OrdinalIgnoreCase))

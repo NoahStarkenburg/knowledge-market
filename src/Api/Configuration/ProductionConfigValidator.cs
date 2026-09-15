@@ -40,6 +40,11 @@ public static class ProductionConfigValidator
                 problems.Add("Storage:AzureBlob:ConnectionString is for the local emulator only; use ServiceUri with a managed identity");
         }
 
+        // Azure Managed Redis is reached by host name and signed into with the managed identity. A
+        // connection string carrying a password means an access key, which Production does not use.
+        if ((cfg["Redis:ConnectionString"] ?? "").Contains("password", StringComparison.OrdinalIgnoreCase))
+            problems.Add("Redis:ConnectionString carries a password; use Redis:Host with a managed identity");
+
         // Stripe is required in Production unless explicitly opted out with Stripe:Disabled=true.
         // This prevents a silent "deployed without Stripe" failure mode where the API boots but
         // checkout endpoints would throw 500 at runtime.

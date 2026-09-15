@@ -267,16 +267,17 @@ export interface ContentFileDto {
   storageKey: string;
 }
 
-// Direct-to-S3 upload (presign -> PUT -> confirm)
+// Direct upload to object storage (presign -> PUT -> confirm)
 export interface PresignUploadRequest {
   fileName: string;
   contentType: string;
 }
 
 export interface PresignUploadResponse {
-  mode: "s3" | "proxy";
+  mode: "direct" | "proxy";
   uploadUrl: string | null;
   key: string | null;
+  headers: Record<string, string> | null;
 }
 
 export interface ConfirmUploadRequest {

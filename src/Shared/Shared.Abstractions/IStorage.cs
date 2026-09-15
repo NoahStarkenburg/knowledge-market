@@ -10,9 +10,11 @@ public sealed record SignedReadOptions
     public string? ResponseContentType { get; init; }
 }
 
-public sealed record PresignedUpload(string Url, string Key);
+// Headers are the ones the client must send with its PUT, because stores differ: S3 signs
+// Content-Type into the URL, and Azure also requires x-ms-blob-type.
+public sealed record PresignedUpload(string Url, string Key, IReadOnlyDictionary<string, string> Headers);
 
-// Binary object storage port. Implemented in the Api layer by LocalStorage / S3Storage.
+// Binary object storage port. Implemented by LocalStorage, S3Storage and AzureBlobStorage.
 public interface IStorage
 {
     Task<string> SaveAsync(Guid userId, string fileName, string mime, Stream content, CancellationToken ct);
@@ -21,7 +23,7 @@ public interface IStorage
     Task<string?> TryGetSignedReadUrl(Guid contentFileId, SignedReadOptions options, CancellationToken ct);
     Task DeleteAsync(Guid contentFileId, CancellationToken ct);
 
-    // Direct-to-S3 upload: the browser PUTs the bytes straight to the store, so the
+    // Direct upload: the browser PUTs the bytes straight to the store, so the
     // API never proxies them. Returns null when the provider can't presign (local
     // disk), signalling the caller to fall back to a proxied upload.
     Task<PresignedUpload?> TryCreateUploadUrlAsync(Guid userId, string fileName, string mime, CancellationToken ct);

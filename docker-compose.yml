@@ -4,7 +4,8 @@
 #
 #        docker compose up -d
 #
-#    Starts SQL Server and nothing else. You run the app on your host with
+#    Starts SQL Server and Azurite, the Azure Storage emulator, and nothing
+#    else. You run the app on your host with
 #    `dotnet run` and `npm run dev`, so you keep the debugger, hot reload and a
 #    fast rebuild loop. The `web` and `api` services below belong to the "full"
 #    profile, and services with a profile only start when that profile is asked
@@ -15,8 +16,8 @@
 #        docker compose --profile full up -d --build
 #        open http://localhost:8080
 #
-#    nginx, the API and SQL Server, wired the way they are in Azure: nginx is
-#    the only thing with a published port, and it forwards /api/* to the API.
+#    nginx, the API, SQL Server and Azurite, wired the way they are in Azure:
+#    nginx is the only way into the app, and it forwards /api/* to the API.
 #    If the images work together here, a deploy only has Azure problems left.
 #
 # Everyday commands:
@@ -74,6 +75,31 @@ services:
       retries: 10
       start_period: 20s
 
+  azurite:
+    # Microsoft's emulator for Azure Storage, standing in for Blob Storage the
+    # way the SQL Server container stands in for Azure SQL. The app talks to it
+    # with the same SDK and the same SAS URLs it uses in Azure.
+    image: mcr.microsoft.com/azure-storage/azurite:3.37.0
+    container_name: km-azurite
+    # Blob service only; queues and tables are unused. --skipApiVersionCheck
+    # lets a newer Azure SDK talk to it before the emulator catches up.
+    command: ["azurite-blob", "--blobHost", "0.0.0.0", "--location", "/data", "--skipApiVersionCheck"]
+    ports:
+      # Published because the BROWSER talks to it: uploads PUT straight here
+      # and downloads redirect here, exactly as they go straight to
+      # <account>.blob.core.windows.net in Azure, bypassing nginx and the API.
+      - "10000:10000"
+    volumes:
+      - azuritedata:/data
+    networks:
+      - data
+    healthcheck:
+      # The image has Node but no curl, so check the port is accepting connections.
+      test: ["CMD", "node", "-e", "require('net').connect(10000,'127.0.0.1').on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   api:
     profiles: ["full"]
     build:
@@ -115,14 +141,18 @@ services:
       # Checkout needs real test keys. Leave Stripe off unless you are testing
       # payments; set the Stripe__* variables in a gitignored .env to turn it on.
       Stripe__Disabled: "true"
-    volumes:
-      # Uploads and lesson text are written to the container's filesystem when
-      # Storage:Provider is "local". Without volumes they vanish every time the
-      # container is recreated. Docker initialises a new named volume from the
-      # image's directory, including its ownership, so the non-root app user
-      # can still write here. In Azure this role is played by an Azure Files share.
-      - apistorage:/app/Storage
-      - apicontent:/app/content
+
+      # Uploads and lesson text go to blob storage, as in Azure, rather than
+      # the container's disposable disk.
+      Storage__Provider: azureblob
+      # Azurite's built-in account and key. Microsoft publishes them and every
+      # Azurite install uses the same ones, so they protect nothing. In Azure
+      # there is no connection string at all: the API signs in as a managed
+      # identity, and the validator refuses a connection string in Production.
+      Storage__AzureBlob__ConnectionString: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;"
+      # The API reaches Azurite as "azurite", a name your browser cannot
+      # resolve. SAS URLs handed to the browser use this address instead.
+      Storage__AzureBlob__PublicServiceUri: http://localhost:10000/devstoreaccount1
     networks:
       # On BOTH networks: the bridge between nginx and the database.
       - edge
@@ -131,6 +161,9 @@ services:
       mssql:
         # Wait for HEALTHY, not merely started. SQL Server accepts connections
         # well before it can answer, and the API migrates the moment it boots.
+        condition: service_healthy
+      azurite:
+        # The API creates the blob containers at startup.
         condition: service_healthy
     # No `ports:` key. The API is reachable only from containers on its
     # networks, which in practice means nginx. Not from your browser, not from
@@ -186,5 +219,4 @@ networks:
 
 volumes:
   mssqldata:
-  apistorage:
-  apicontent:
+  azuritedata:

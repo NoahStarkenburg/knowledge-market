@@ -570,18 +570,21 @@ export const apiClient = {
     );
   },
 
-  // Uploads a lesson file. Prefers a direct-to-S3 presigned PUT so the API never
-  // proxies the bytes; falls back to a multipart upload through the API when the
-  // storage backend can't presign or the direct PUT fails.
+  // Uploads a lesson file. Prefers a direct PUT to object storage (an S3 presigned
+  // URL or an Azure SAS URL) so the API never proxies the bytes; falls back to a
+  // multipart upload through the API when the storage backend can't presign or the
+  // direct PUT fails.
   async uploadFile(courseId: string, file: File): Promise<ContentFileDto> {
     const contentType = file.type || "application/octet-stream";
     try {
       const presign = await apiClient.presignUpload({ fileName: file.name, contentType });
-      if (presign.mode === "s3" && presign.uploadUrl && presign.key) {
-        // Bare fetch: this goes straight to S3, not our API — no cookies/CSRF.
+      if (presign.mode === "direct" && presign.uploadUrl && presign.key) {
+        // Bare fetch: this goes straight to storage, not our API — no cookies/CSRF.
+        // The server says which headers the store needs; Azure rejects a PUT
+        // without x-ms-blob-type.
         const put = await fetch(presign.uploadUrl, {
           method: "PUT",
-          headers: { "Content-Type": contentType },
+          headers: presign.headers ?? { "Content-Type": contentType },
           body: file,
         });
         if (put.ok) {

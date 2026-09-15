@@ -4,9 +4,9 @@
 #
 #        docker compose up -d
 #
-#    Starts SQL Server and Azurite, the Azure Storage emulator, and nothing
-#    else. You run the app on your host with
-#    `dotnet run` and `npm run dev`, so you keep the debugger, hot reload and a
+#    Starts SQL Server, Azurite (the Azure Storage emulator) and Redis, and
+#    nothing else. You run the app on your host with
+#    `dotnet run` and `npm start`, so you keep the debugger, hot reload and a
 #    fast rebuild loop. The `web` and `api` services below belong to the "full"
 #    profile, and services with a profile only start when that profile is asked
 #    for — so this command is exactly what it always was.
@@ -16,7 +16,7 @@
 #        docker compose --profile full up -d --build
 #        open http://localhost:8080
 #
-#    nginx, the API, SQL Server and Azurite, wired the way they are in Azure:
+#    nginx, the API, SQL Server, Azurite and Redis, wired the way they are in Azure:
 #    nginx is the only way into the app, and it forwards /api/* to the API.
 #    If the images work together here, a deploy only has Azure problems left.
 #
@@ -100,6 +100,23 @@ services:
       timeout: 3s
       retries: 10
 
+  redis:
+    # The cache. A plain Redis container here; Azure Managed Redis in Azure,
+    # where the API signs in with its managed identity instead of connecting
+    # openly like this.
+    image: redis:7.4-alpine
+    container_name: km-redis
+    # No published port. The API reaches it by name on the data network, and
+    # you can still watch it work with `docker exec km-redis redis-cli MONITOR`.
+    # Like the database in Azure, the cache has no address outside the app.
+    networks:
+      - data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   api:
     profiles: ["full"]
     build:
@@ -153,6 +170,10 @@ services:
       # The API reaches Azurite as "azurite", a name your browser cannot
       # resolve. SAS URLs handed to the browser use this address instead.
       Storage__AzureBlob__PublicServiceUri: http://localhost:10000/devstoreaccount1
+
+      # The cache. Deliberately not in depends_on: the API starts without Redis
+      # and treats every read as a miss until it connects.
+      Redis__ConnectionString: redis:6379
     networks:
       # On BOTH networks: the bridge between nginx and the database.
       - edge

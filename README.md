@@ -10,7 +10,7 @@ Built as a .NET 9 REST API with an Angular 21 single-page frontend.
 | API | .NET 9, ASP.NET Core (minimal APIs + controllers) |
 | Data | SQL Server 2022, Entity Framework Core (per-schema migrations) |
 | Auth | JWT in an HttpOnly cookie, CSRF double-submit token, role-based policies |
-| Cache | Redis (optional; falls back to a no-op cache when unconfigured) |
+| Cache | Redis (optional; no-op when unconfigured), Azure Managed Redis with Entra ID in Azure |
 | Payments | Stripe (one-time and subscription, webhook-driven fulfilment) |
 | Storage | Pluggable: local filesystem, S3-compatible, or Azure Blob Storage |
 | Frontend | Angular 21 (standalone components, signals), TypeScript, Tailwind CSS |

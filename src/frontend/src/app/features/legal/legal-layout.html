@@ -1,0 +1,30 @@
+    <div class="min-h-screen bg-paper">
+      <div class="max-w-[1100px] mx-auto px-5 sm:px-6 py-12">
+        <a routerLink="/" class="inline-flex items-center gap-1.5 t-label text-ink-mute hover:text-ink transition-colors mb-8">&larr; Back to home</a>
+
+        <div class="border-b-2 border-ink pb-8 mb-10">
+          <div class="t-eyebrow text-cobalt mb-3">Legal</div>
+          <h1 class="font-display display-x font-extrabold uppercase leading-[0.9] tracking-[-0.03em] text-ink text-[clamp(2.25rem,6vw,3.75rem)]">{{ title() }}</h1>
+          <p class="t-label text-ink-mute mt-5">Last updated: {{ lastUpdated() }}</p>
+        </div>
+
+        <div class="grid grid-cols-12 gap-8 lg:gap-12">
+          <aside class="col-span-12 lg:col-span-3 lg:sticky lg:top-20 lg:self-start">
+            <div class="t-label text-ink mb-3 pb-2 border-b-2 border-ink">Documents</div>
+            <nav class="space-y-2">
+              @for (l of links; track l.to) {
+                <a [routerLink]="l.to" routerLinkActive #rla="routerLinkActive"
+                   [class]="linkBase + ' ' + (rla.isActive ? 'bg-ink text-paper' : 'bg-chalk text-ink-soft hover:bg-ink hover:text-paper')">{{ l.label }}</a>
+              }
+            </nav>
+          </aside>
+
+          <div class="col-span-12 lg:col-span-9 min-w-0">
+            <div class="panel p-6 sm:p-8 lg:p-10 {{ prose }}">
+              <ng-content />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  

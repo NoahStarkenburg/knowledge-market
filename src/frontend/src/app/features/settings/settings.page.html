@@ -1,0 +1,29 @@
+    <div class="min-h-screen bg-paper flex">
+      <aside class="w-[220px] shrink-0 sticky top-14 self-start h-[calc(100vh-3.5rem)] flex flex-col px-6 py-8 border-r-2 border-ink">
+        <div class="mb-8">
+          <div class="t-eyebrow text-ink-mute mb-2">Signed in as</div>
+          <div class="text-[13px] text-ink truncate" [title]="auth.email() ?? ''">{{ auth.email() ?? '—' }}</div>
+        </div>
+        <nav class="flex-1 space-y-1">
+          @for (item of navItems; track item.section; let idx = $index) {
+            <a [routerLink]="['/settings', item.section]" routerLinkActive #rla="routerLinkActive"
+               class="group flex items-baseline gap-3 py-2.5 pl-3 -ml-3 border-l-2 transition-colors" [class]="rla.isActive ? 'border-cobalt text-ink' : 'border-transparent text-ink-mute hover:text-ink hover:border-ink'">
+              <span class="font-mono text-[10px] font-bold tabular-nums" [class]="rla.isActive ? 'text-cobalt' : 'text-ink-mute group-hover:text-ink'">{{ (idx + 1).toString().padStart(2, '0') }}</span>
+              <span class="t-label whitespace-nowrap">{{ item.label }}</span>
+            </a>
+          }
+        </nav>
+      </aside>
+
+      <main class="flex-1 min-w-0">
+        @switch (activeSection()) {
+          @case ('overview') { <app-overview-section /> }
+          @case ('dashboard') { <app-dashboard-section /> }
+          @case ('learning') { <app-learning-section /> }
+          @case ('creator') { <app-creator-section /> }
+          @case ('orders') { <app-orders-section /> }
+          @case ('account') { <app-account-section /> }
+        }
+      </main>
+    </div>
+  

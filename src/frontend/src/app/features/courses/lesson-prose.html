@@ -1,0 +1,23 @@
+
+    <div class="text-[15px] text-ink-soft leading-[1.7]">
+      @for (b of blocks(); track $index) {
+        @if (b.kind === 'youtube') {
+          @if (b.embed) {
+            <div class="my-4 aspect-video w-full border-2 border-ink bg-black">
+              <iframe [src]="b.embed" title="Lesson video" class="w-full h-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            </div>
+          } @else {
+            <a [href]="b.url" target="_blank" rel="noreferrer" class="group my-4 flex items-center gap-4 panel p-4 hover:bg-ink transition-colors">
+              <span class="grid place-items-center w-11 h-11 bg-danger text-white shrink-0"><lucide-icon [img]="youtube" class="w-6 h-6" /></span>
+              <span class="min-w-0">
+                <span class="block t-micro text-ink-mute group-hover:text-paper/70">Watch on YouTube</span>
+                <span class="block font-display font-bold text-[16px] text-ink group-hover:text-paper truncate">{{ b.query }}</span>
+              </span>
+            </a>
+          }
+        } @else {
+          <p class="whitespace-pre-line mb-3 last:mb-0">{{ b.text }}</p>
+        }
+      }
+    </div>
+  

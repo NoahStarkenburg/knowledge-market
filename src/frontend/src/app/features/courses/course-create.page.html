@@ -1,0 +1,31 @@
+    <div class="min-h-screen bg-paper">
+      <div class="max-w-2xl mx-auto px-5 sm:px-6 py-12">
+        <div class="t-eyebrow text-cobalt mb-3">New course</div>
+        <h1 class="font-display display-x font-extrabold uppercase leading-[0.9] tracking-[-0.03em] text-ink text-[clamp(2.25rem,6vw,3.5rem)] mb-8">Create course</h1>
+
+        <div class="panel p-6 sm:p-8 shadow-hard">
+          <form (ngSubmit)="submit()">
+            <app-form-error-list [error]="error()" />
+            <app-field label="Title">
+              <input appInput required name="title" [ngModel]="title()" (ngModelChange)="title.set($event)" [ngModelOptions]="{ standalone: true }" />
+            </app-field>
+            <label class="flex flex-col gap-2 mb-5">
+              <span class="t-label text-ink">Description</span>
+              <textarea class="panel px-3.5 py-2.5 text-[15px] text-ink placeholder:text-ink-mute min-h-[96px] resize-y focus:outline-none focus:border-cobalt focus:ring-2 focus:ring-cobalt/30 transition-colors"
+                        name="desc" [ngModel]="desc()" (ngModelChange)="desc.set($event)" [ngModelOptions]="{ standalone: true }"></textarea>
+            </label>
+            <app-field label="Price amount">
+              <input appInput type="number" step="0.01" required name="price" [ngModel]="priceAmount()" (ngModelChange)="priceAmount.set($event)" [ngModelOptions]="{ standalone: true }" />
+            </app-field>
+            <app-field label="Currency">
+              <input appInput required name="currency" [ngModel]="priceCurrency()" (ngModelChange)="priceCurrency.set($event)" [ngModelOptions]="{ standalone: true }" />
+            </app-field>
+            <app-field label="Tags (comma-separated)">
+              <input appInput placeholder="e.g. javascript, react, beginner" name="tags" [ngModel]="tagsInput()" (ngModelChange)="tagsInput.set($event)" [ngModelOptions]="{ standalone: true }" />
+            </app-field>
+            <button appButton type="submit" [disabled]="loading()">{{ loading() ? 'Creating...' : 'Create' }}</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  

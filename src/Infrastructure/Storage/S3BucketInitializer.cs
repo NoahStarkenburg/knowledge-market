@@ -37,7 +37,7 @@ namespace Infrastructure.Storage
 
         private async Task EnsureUploadCorsAsync(string bucketName, CancellationToken ct)
         {
-            var origin = _cfg["Cors:FrontendOrigin"] ?? "http://localhost:5173";
+            var origin = _cfg["Cors:FrontendOrigin"] ?? "http://localhost:4200";
             try
             {
                 await _s3.PutCORSConfigurationAsync(new PutCORSConfigurationRequest

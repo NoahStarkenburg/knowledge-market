@@ -1,0 +1,95 @@
+    @if (loading()) {
+      <div class="flex justify-center py-24"><app-loading-spinner /></div>
+    } @else {
+      <div class="p-6 md:p-8">
+        <div class="mb-8">
+          <div class="t-eyebrow text-cobalt mb-3">Creator dashboard</div>
+          <h1 class="font-display display-x font-extrabold uppercase leading-[0.9] tracking-[-0.03em] text-ink text-[clamp(2.5rem,7vw,4rem)]">The ledger</h1>
+          <p class="text-[14px] text-ink-soft mt-4 max-w-[60ch]">Revenue, enrollments, and performance across all your courses.</p>
+        </div>
+
+        <app-form-error-list [error]="error()" />
+
+        @if (dashboard(); as d) {
+          <div class="grid grid-cols-2 lg:grid-cols-4 divide-x-2 divide-ink border-y-2 border-ink mb-10">
+            @for (s of stats(); track s.label) {
+              <div class="px-5 py-5 first:pl-0 lg:first:pl-5">
+                <div class="t-label text-ink-mute mb-3">{{ s.label }}</div>
+                <div class="font-display display-x font-extrabold text-[38px] leading-none tabular-nums tracking-[-0.03em] text-ink">{{ s.value }}</div>
+                @if (s.note) { <div class="text-[12px] text-ink-mute mt-2">{{ s.note }}</div> }
+              </div>
+            }
+          </div>
+
+          <div class="mb-10">
+            <div class="t-label text-ink mb-4 pb-2 border-b-2 border-ink">Performance by course</div>
+            @if (d.courses.length === 0) {
+              <div class="py-16 text-center border-b-2 border-ink">
+                <div class="font-display display-x font-extrabold text-[56px] leading-none text-ink mb-3">00</div>
+                <p class="text-[14px] text-ink-mute mb-3">No courses yet.</p>
+                <a routerLink="/courses/new" class="t-label text-ink underline underline-offset-4 decoration-2 decoration-cobalt hover:text-cobalt">Create your first course</a>
+              </div>
+            } @else {
+              <div class="hidden md:grid grid-cols-[1fr_80px_110px_80px_90px] gap-4 py-2 border-b-2 border-ink t-micro text-ink-mute">
+                <span>Course</span><span class="text-right">Students</span><span class="text-right">Revenue</span><span class="text-right">Rating</span><span class="text-right">Status</span>
+              </div>
+              <ul>
+                @for (c of d.courses; track c.id) {
+                  <li class="border-b-2 border-ink">
+                    <a [routerLink]="['/courses', c.id]" class="group flex items-center gap-4 py-4 px-3 -mx-3 hover:bg-ink transition-colors">
+                      <div class="w-12 h-12 shrink-0 overflow-hidden flex items-center justify-center border-2 border-ink group-hover:border-paper {{ tone(c.id) }}">
+                        @if (c.thumbnailFileId) { <img [src]="api.getCourseThumbnailUrl(c.id)" alt="" class="w-full h-full object-cover" /> } @else { <span class="font-display font-extrabold text-[20px] text-white">{{ (c.title[0] ?? 'C').toUpperCase() }}</span> }
+                      </div>
+                      <div class="flex-1 min-w-0">
+                        <div class="font-display font-bold text-[17px] tracking-[-0.01em] text-ink truncate group-hover:text-paper">{{ c.title }}</div>
+                        @if (c.publishedAt) { <div class="t-micro text-ink-mute mt-1 group-hover:text-paper/60">Published {{ monthYear(c.publishedAt) }}</div> }
+                      </div>
+                      <div class="hidden md:flex items-center gap-8 shrink-0">
+                        <div class="w-[80px] text-right"><div class="font-display font-bold text-[18px] tabular-nums tracking-[-0.01em] text-ink group-hover:text-paper">{{ c.enrollments.toLocaleString() }}</div></div>
+                        <div class="w-[110px] text-right"><div class="font-display font-extrabold text-[18px] tabular-nums tracking-[-0.01em] text-cobalt group-hover:text-signal">{{ fmtRev(c.revenue) }}</div></div>
+                        <div class="w-[80px] text-right">
+                          @if (c.averageRating != null) {
+                            <div class="font-display font-bold text-[18px] tabular-nums tracking-[-0.01em] text-ink group-hover:text-paper">{{ c.averageRating.toFixed(1) }}</div>
+                            <div class="t-micro text-ink-mute mt-0.5 group-hover:text-paper/60">{{ c.reviewCount }} rev</div>
+                          } @else { <div class="text-[18px] text-ink-mute group-hover:text-paper/60">—</div> }
+                        </div>
+                        <div class="w-[90px] text-right"><span class="t-micro text-ink group-hover:text-paper">{{ c.status === 'Published' ? 'In print' : 'Draft' }}</span></div>
+                      </div>
+                      <div class="md:hidden flex items-center gap-4 shrink-0 text-right">
+                        <div><div class="font-display font-extrabold text-[16px] tabular-nums text-cobalt group-hover:text-signal">{{ fmtRev(c.revenue) }}</div><div class="t-micro text-ink-mute group-hover:text-paper/60">{{ c.enrollments }} students</div></div>
+                        <lucide-icon [img]="chevron" class="w-4 h-4 text-ink-mute group-hover:text-paper" />
+                      </div>
+                    </a>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+
+          <div class="panel">
+            <div class="panel-hd flex items-center justify-between"><h3 class="t-heading text-ink">Recent sales</h3><span class="t-label text-ink-mute">{{ salesTotal().toLocaleString() }} total</span></div>
+            @if (salesLoading()) {
+              <div class="p-8 flex justify-center"><app-loading-spinner /></div>
+            } @else if (recentSales().length === 0) {
+              <div class="px-6 py-10 text-center"><p class="text-[14px] text-ink-mute">No sales yet.</p></div>
+            } @else {
+              <ul class="divide-y-2 divide-ink/10">
+                @for (s of recentSales(); track s.orderId) {
+                  <li class="flex items-center justify-between px-6 py-3.5 gap-4">
+                    <div class="flex-1 min-w-0"><div class="font-semibold text-[14px] text-ink truncate">{{ s.courseTitle }}</div><div class="t-micro text-ink-mute mt-0.5">{{ saleDate(s.paidAt) }}</div></div>
+                    <div class="font-display font-extrabold text-[16px] tabular-nums text-cobalt shrink-0">{{ fmtRev(s.amount) }}</div>
+                  </li>
+                }
+              </ul>
+              @if (totalSalesPages() > 1) {
+                <div class="px-6 py-4 border-t-2 border-ink flex justify-between items-center">
+                  <span class="t-label text-ink-mute">Page {{ salesPage() }} of {{ totalSalesPages() }}</span>
+                  <div class="flex gap-2"><button appButton variant="secondary" size="sm" [disabled]="salesPage() <= 1" (click)="salesPage.set(salesPage() - 1)">Previous</button><button appButton variant="secondary" size="sm" [disabled]="salesPage() >= totalSalesPages()" (click)="salesPage.set(salesPage() + 1)">Next</button></div>
+                </div>
+              }
+            }
+          </div>
+        }
+      </div>
+    }
+  

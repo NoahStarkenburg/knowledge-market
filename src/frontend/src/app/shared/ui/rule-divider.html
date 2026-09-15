@@ -1,0 +1,12 @@
+    @if (!label()) {
+      <hr class="border-0 border-t-2 border-ink" />
+    } @else {
+      <div class="flex items-center gap-3" [class.justify-center]="align() === 'center'">
+        @if (align() === 'center') {
+          <span class="flex-1 border-t-2 border-ink"></span>
+        }
+        <span class="t-eyebrow text-ink">{{ label() }}</span>
+        <span class="flex-1 border-t-2 border-ink"></span>
+      </div>
+    }
+  

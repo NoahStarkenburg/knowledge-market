@@ -1,0 +1,50 @@
+    @if (dataLoading() || store.loading()) {
+      <div class="p-6 md:p-8">
+        <div class="flex items-center gap-5 mb-10"><app-skeleton class="w-16 h-16 rounded-full" /><div><app-skeleton class="h-6 w-40 mb-2" /><app-skeleton class="h-4 w-56" /></div></div>
+        <div class="grid grid-cols-3 gap-px mb-10"><app-skeleton class="h-24" /><app-skeleton class="h-24" /><app-skeleton class="h-24" /></div>
+        <div class="grid grid-cols-2 gap-5"><app-skeleton class="h-36" /><app-skeleton class="h-36" /></div>
+      </div>
+    } @else {
+      <div class="p-6 md:p-8">
+        <app-form-error-list [error]="dataError()" />
+
+        <div class="flex items-center gap-5 mb-10">
+          <div class="w-16 h-16 bg-ink text-paper rounded-full flex items-center justify-center font-display font-extrabold text-[22px] shrink-0">{{ initials() }}</div>
+          <div class="min-w-0">
+            <div class="t-eyebrow text-cobalt mb-1">Account overview</div>
+            <h1 class="font-display font-extrabold uppercase tracking-[-0.02em] leading-[0.95] text-ink text-[clamp(1.8rem,5vw,3rem)] truncate">{{ username() }}</h1>
+            <p class="text-[13px] text-ink-mute mt-1">{{ auth.email() }}</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-3 divide-x-2 divide-ink border-y-2 border-ink mb-10">
+          <div class="px-5 py-5 first:pl-0"><div class="t-label text-ink-mute mb-3">Created</div><div class="font-display display-x font-extrabold text-[38px] leading-none tabular-nums tracking-[-0.03em] text-ink">{{ myCourses().length }}</div><div class="text-[12px] text-ink-mute mt-2">courses</div></div>
+          <div class="px-5 py-5"><div class="t-label text-ink-mute mb-3">Enrolled</div><div class="font-display display-x font-extrabold text-[38px] leading-none tabular-nums tracking-[-0.03em] text-ink">{{ store.entries().length }}</div><div class="text-[12px] text-ink-mute mt-2">courses</div></div>
+          <div class="px-5 py-5"><div class="t-label text-ink-mute mb-3">Orders</div><div class="font-display display-x font-extrabold text-[38px] leading-none tabular-nums tracking-[-0.03em] text-ink">{{ totalOrders() }}</div><div class="text-[12px] text-ink-mute mt-2">purchases</div></div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-5">
+          <div class="panel p-5">
+            <h3 class="t-heading text-ink mb-4 pb-2 border-b-2 border-ink">Quick actions</h3>
+            <div class="space-y-3">
+              <a routerLink="/courses/new" class="block font-display font-bold text-[15px] text-ink hover:text-cobalt transition-colors">Create a new course</a>
+              <a routerLink="/courses" class="block font-display font-bold text-[15px] text-ink hover:text-cobalt transition-colors">Browse all courses</a>
+            </div>
+          </div>
+          @if (recentOrders().length > 0) {
+            <div class="panel p-5">
+              <div class="flex items-center justify-between mb-4 pb-2 border-b-2 border-ink">
+                <h3 class="t-heading text-ink">Recent orders</h3>
+                <a routerLink="/settings/orders" class="t-micro text-cobalt hover:text-ink">View all</a>
+              </div>
+              <ul class="space-y-2.5">
+                @for (o of recentOrders(); track o.id) {
+                  <li class="flex items-center justify-between gap-2"><span class="text-[13px] text-ink truncate">{{ o.courseTitle }}</span><span class="t-micro shrink-0" [class]="o.status === 'Paid' ? 'text-[#1b5e34]' : 'text-cobalt'">{{ o.status }}</span></li>
+                }
+              </ul>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  

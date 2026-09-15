@@ -181,7 +181,7 @@ services:
         # argument rather than a runtime variable. Public by design. Read from
         # your shell or from a gitignored .env next to this file; empty is fine
         # and simply means checkout will not load.
-        VITE_STRIPE_PUBLISHABLE_KEY: ${VITE_STRIPE_PUBLISHABLE_KEY:-}
+        STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY:-}
     image: knowledge-market-web:local
     environment:
       # Where nginx forwards /api/*, and what it sends as the Host header.

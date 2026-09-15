@@ -1,0 +1,25 @@
+    <div class="p-6 md:p-8">
+      <div class="mb-8">
+        <div class="t-eyebrow text-cobalt mb-3">Enrolled</div>
+        <h1 class="font-display display-x font-extrabold uppercase leading-[0.9] tracking-[-0.03em] text-ink text-[clamp(2.5rem,7vw,4rem)]">My Learning</h1>
+        <p class="text-[14px] text-ink-soft mt-4 max-w-[60ch]">Courses you've enrolled in or purchased.</p>
+      </div>
+
+      <app-form-error-list [error]="store.error()" />
+
+      @if (store.loading()) {
+        <div class="flex justify-center py-16"><app-loading-spinner /></div>
+      } @else if (store.entries().length === 0 && !store.error()) {
+        <div class="border-y-2 border-ink py-16 text-center">
+          <div class="font-display display-x font-extrabold text-[56px] leading-none text-ink mb-3">00</div>
+          <p class="font-display font-bold uppercase tracking-[-0.01em] text-[20px] text-ink mb-2">No enrolled courses yet</p>
+          <p class="text-[14px] text-ink-mute mb-6">Start learning by enrolling in a course.</p>
+          <a routerLink="/courses" class="inline-flex t-label bg-ink text-paper border-2 border-ink px-5 py-2.5 shadow-hard-sm hover:bg-cobalt hover:border-cobalt hover:text-white active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition-[background-color,color,border-color,transform,box-shadow] duration-100">Browse courses</a>
+        </div>
+      } @else {
+        <div class="grid md:grid-cols-2 gap-5">
+          @for (entry of store.entries(); track entry.course.id) { <app-enrolled-course-card [entry]="entry" /> }
+        </div>
+      }
+    </div>
+  

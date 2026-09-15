@@ -1,0 +1,83 @@
+@if (successMessage()) { <app-alert type="success">{{ successMessage() }}</app-alert> }
+@if (error()) { <app-form-error-list [error]="error()" /> }
+
+@if (isDraft()) {
+  <div class="panel">
+    <div class="panel-hd"><h2 class="t-heading text-ink">Edit draft</h2></div>
+    <div class="p-6">
+      <form (ngSubmit)="updateDraft()" class="space-y-4 mb-5">
+        <label class="flex flex-col gap-1.5">
+          <span class="t-label text-ink">Title</span>
+          <input class="input-field" [ngModel]="editTitle()" (ngModelChange)="editTitle.set($event)" [ngModelOptions]="{ standalone: true }" name="et" />
+        </label>
+        <label class="flex flex-col gap-1.5">
+          <span class="t-label text-ink">Price (USD)</span>
+          <input class="input-field" type="number" step="0.01" min="0" placeholder="0.00" [ngModel]="editPrice()" (ngModelChange)="setEditPrice($event)" [ngModelOptions]="{ standalone: true }" name="ep" />
+          <span class="text-[11px] text-ink-mute">Set to 0 for a free course</span>
+        </label>
+        <label class="flex flex-col gap-1.5">
+          <span class="t-label text-ink">Tags</span>
+          <input class="input-field" placeholder="javascript, react, beginner" [ngModel]="editTagsInput()" (ngModelChange)="editTagsInput.set($event)" [ngModelOptions]="{ standalone: true }" name="etags" />
+          <span class="text-[11px] text-ink-mute">Comma-separated</span>
+        </label>
+        <button appButton type="submit">Save changes</button>
+      </form>
+
+      <div class="border-t-2 border-ink pt-5 space-y-3">
+        @if (!confirmPublish()) {
+          <button appButton (click)="confirmPublish.set(true)" class="w-full">Publish course</button>
+        } @else {
+          <div class="bg-signal border-2 border-ink p-4">
+            <p class="text-[13px] text-ink font-medium mb-3">Publishing makes this course visible to everyone. This cannot be undone.</p>
+            <div class="flex gap-2"><button appButton (click)="publish()">Yes, publish</button><button appButton variant="secondary" (click)="confirmPublish.set(false)">Cancel</button></div>
+          </div>
+        }
+        @if (!confirmDelete()) {
+          <button (click)="confirmDelete.set(true)" [disabled]="deleteLoading()" class="flex items-center gap-1.5 t-label text-ink-mute hover:text-danger transition-colors disabled:opacity-50">
+            <lucide-icon [img]="trashIcon" class="w-3.5 h-3.5" />Delete this course
+          </button>
+        } @else {
+          <div class="bg-[#fdeceb] border-2 border-danger p-4">
+            <p class="text-[13px] text-danger font-medium mb-3">This permanently deletes the course and all its lessons.</p>
+            <div class="flex gap-2"><button appButton variant="danger" (click)="deleteCourse()" [disabled]="deleteLoading()">{{ deleteLoading() ? 'Deleting…' : 'Yes, delete' }}</button><button appButton variant="secondary" (click)="confirmDelete.set(false)" [disabled]="deleteLoading()">Cancel</button></div>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+} @else {
+  <div class="bg-[#eafaf0] border-2 border-[#1f7a3d] px-5 py-4 text-[14px] text-[#1b5e34] font-medium">Course is live. Use Manage Lessons to add or update content.</div>
+}
+
+<!-- Thumbnail -->
+<div class="panel">
+  <div class="panel-hd"><h2 class="t-heading text-ink">{{ course().thumbnailFileId ? 'Replace thumbnail' : 'Upload thumbnail' }}</h2></div>
+  <div class="p-6 flex gap-5 items-start">
+    @if (course().thumbnailFileId) { <img [src]="api.getCourseThumbnailUrl(course().id) + '?v=' + thumbnailVersion()" alt="Current thumbnail" class="w-28 h-20 object-cover border-2 border-ink shrink-0" /> }
+    <div class="flex-1">
+      <p class="text-[13px] text-ink-mute mb-3">Appears as the course banner. Use at least 1280×720px. JPG, PNG, or WebP.</p>
+      <form (ngSubmit)="uploadThumbnail()" class="space-y-3">
+        <input #thumbInput type="file" accept="image/*" class="text-sm text-ink-mute file:mr-3 file:py-1.5 file:px-3 file:border-2 file:border-ink file:text-sm file:font-bold file:bg-paper file:text-ink hover:file:bg-ink hover:file:text-paper file:transition-colors file:font-mono file:uppercase file:tracking-[0.08em] file:text-[11px]" (change)="thumbnailFile.set(fileFrom($event))" />
+        <app-google-drive-button mimeTypes="image/jpeg,image/png,image/webp,image/gif" (picked)="thumbnailFile.set($event)" />
+        @if (thumbnailFile()) { <p class="text-[12px] text-ink-mute font-mono">Selected: {{ thumbnailFile()!.name }}</p> }
+        @if (thumbnailError()) { <app-form-error-list [error]="thumbnailError()" /> }
+        <button appButton type="submit" [disabled]="!thumbnailFile() || thumbnailLoading()">{{ thumbnailLoading() ? 'Uploading…' : 'Upload thumbnail' }}</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Intro video -->
+<div class="panel">
+  <div class="panel-hd"><h2 class="t-heading text-ink">{{ course().introVideoFileId ? 'Replace intro video' : 'Upload intro video' }}</h2></div>
+  <div class="p-6">
+    <p class="text-[13px] text-ink-mute mb-4">A short preview gives students a taste of your course. MP4, MOV, or WebM up to 500 MB.</p>
+    <form (ngSubmit)="uploadIntroVideo()" class="space-y-3">
+      <input #videoInput type="file" accept="video/*" class="text-sm text-ink-mute file:mr-3 file:py-1.5 file:px-3 file:border-2 file:border-ink file:text-sm file:font-bold file:bg-paper file:text-ink hover:file:bg-ink hover:file:text-paper file:transition-colors file:font-mono file:uppercase file:tracking-[0.08em] file:text-[11px]" (change)="introVideoFile.set(fileFrom($event))" />
+      <app-google-drive-button mimeTypes="video/mp4,video/webm,video/ogg,video/quicktime" (picked)="introVideoFile.set($event)" />
+      @if (introVideoFile()) { <p class="text-[12px] text-ink-mute font-mono">Selected: {{ introVideoFile()!.name }}</p> }
+      @if (introVideoError()) { <app-form-error-list [error]="introVideoError()" /> }
+      <button appButton type="submit" [disabled]="!introVideoFile() || introVideoLoading()">{{ introVideoLoading() ? 'Uploading…' : 'Upload video' }}</button>
+    </form>
+  </div>
+</div>

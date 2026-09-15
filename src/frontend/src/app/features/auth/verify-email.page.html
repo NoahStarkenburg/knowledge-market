@@ -1,0 +1,47 @@
+    <div class="min-h-screen bg-paper bg-grid flex flex-col items-center justify-center px-4 py-12">
+      <a routerLink="/" class="flex items-center gap-2.5 mb-8">
+        <app-ornament [size]="20" class="text-cobalt" />
+        <span class="font-display font-extrabold uppercase tracking-[-0.01em] text-[20px] leading-none">
+          <span class="text-ink">Knowledge</span><span class="text-cobalt">Market</span>
+        </span>
+      </a>
+
+      <div class="panel shadow-hard p-8 w-full max-w-md text-center">
+        @if (success === 'true') {
+          <p class="t-eyebrow text-cobalt mb-4">Verified</p>
+          <h1 class="font-display font-extrabold uppercase tracking-[-0.02em] leading-[0.95] text-[clamp(1.9rem,5vw,2.5rem)] text-ink mb-3">Email verified!</h1>
+          <p class="text-[13px] leading-[1.6] text-ink-soft mb-6">Your email address has been confirmed. You now have full access to KnowledgeMarket.</p>
+          <a routerLink="/courses"><button appButton variant="primary" size="lg" class="w-full">Browse courses</button></a>
+        } @else if (error === 'expired' || error === 'invalid') {
+          <p class="t-eyebrow text-danger mb-4">Error</p>
+          <h1 class="font-display font-extrabold uppercase tracking-[-0.02em] leading-[0.95] text-[clamp(1.9rem,5vw,2.5rem)] text-ink mb-3">{{ error === 'expired' ? 'Link expired' : 'Invalid link' }}</h1>
+          <p class="text-[13px] leading-[1.6] text-ink-soft mb-6">
+            {{ error === 'expired' ? 'This verification link has expired. Request a new one below.' : 'This verification link is not valid. Request a new one below.' }}
+          </p>
+          @if (resendDone()) {
+            <p class="t-label text-[#1b5e34]">Sent! Check your inbox.</p>
+          } @else if (auth.isAuthenticated()) {
+            @if (resendError()) {
+              <p class="text-[13px] text-danger mb-3">{{ resendError()!.detail ?? resendError()!.message ?? 'Failed to resend. Please try again.' }}</p>
+            }
+            <button appButton variant="primary" size="lg" [disabled]="resendLoading()" (click)="resend()">{{ resendLoading() ? 'Sending…' : 'Resend verification email' }}</button>
+          } @else {
+            <p class="text-[13px] text-ink-soft">
+              <a routerLink="/login" class="font-semibold text-cobalt hover:text-ink underline underline-offset-2 decoration-2">Sign in</a> to request a new verification email.
+            </p>
+          }
+        } @else {
+          <p class="t-eyebrow text-cobalt mb-4">Check your inbox</p>
+          <h1 class="font-display font-extrabold uppercase tracking-[-0.02em] leading-[0.95] text-[clamp(1.9rem,5vw,2.5rem)] text-ink mb-3">Check your email</h1>
+          <p class="text-[13px] leading-[1.6] text-ink-soft mb-6">We sent a verification link to your email address. Click it to confirm your account.</p>
+          @if (auth.isAuthenticated()) {
+            @if (resendDone()) {
+              <p class="t-label text-[#1b5e34]">Sent! Check your inbox.</p>
+            } @else {
+              <button appButton variant="secondary" size="lg" [disabled]="resendLoading()" (click)="resend()">{{ resendLoading() ? 'Sending…' : 'Resend email' }}</button>
+            }
+          }
+        }
+      </div>
+    </div>
+  

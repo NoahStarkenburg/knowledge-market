@@ -1,7 +1,7 @@
 # KnowledgeMarket
 
 A course marketplace where creators publish courses and learners buy and watch them.
-Built as a .NET 9 REST API with a React 19 single-page frontend.
+Built as a .NET 9 REST API with an Angular 21 single-page frontend.
 
 ## Stack
 
@@ -12,9 +12,9 @@ Built as a .NET 9 REST API with a React 19 single-page frontend.
 | Auth | JWT in an HttpOnly cookie, CSRF double-submit token, role-based policies |
 | Cache | Redis (optional; falls back to a no-op cache when unconfigured) |
 | Payments | Stripe (one-time and subscription, webhook-driven fulfilment) |
-| Storage | Pluggable: local filesystem or S3-compatible object storage |
-| Frontend | React 19, TypeScript, Vite, Tailwind CSS, React Router |
-| Tests | xUnit (backend), Vitest + Testing Library (frontend), Playwright (e2e) |
+| Storage | Pluggable: local filesystem, S3-compatible, or Azure Blob Storage |
+| Frontend | Angular 21 (standalone components, signals), TypeScript, Tailwind CSS |
+| Tests | xUnit with Testcontainers (backend), Vitest through the Angular CLI (frontend) |
 
 ## Running it locally
 
@@ -46,10 +46,11 @@ exposes Swagger at `/swagger`.
 ```bash
 cd src/frontend
 npm ci
-npm run dev
+npm start
 ```
 
-Serves on <http://localhost:5173>.
+Serves on <http://localhost:4200> and forwards `/api` to the API, so the browser
+sees one origin.
 
 **4. Seed sample data (optional).**
 
@@ -93,7 +94,8 @@ Safe to commit:
   bound to your own machine, created from that same file. Anyone who can read it
   could already start an identical container.
 - Issuer and audience names, bucket names, feature flags, ports, URLs.
-- Anything in `.env.example`, which carries dummy values on purpose.
+- The Azurite account key in `docker-compose.yml`, which Microsoft publishes and
+  every Azurite install shares.
 
 Never commit:
 
@@ -120,21 +122,17 @@ The app runs without any of these using the Development defaults. Stripe is off
 by default (`Stripe:Disabled: true`); set the keys above and flip it to `false`
 to enable payments.
 
-### Frontend variables are public
+### Frontend values are public
 
-Anything named `VITE_*` is **baked into the JavaScript bundle at build time** and
-shipped to the browser, where anyone can read it. Vite performs a literal text
-substitution, so there is no way to hide a value there.
+The frontend takes four build-time values: `STRIPE_PUBLISHABLE_KEY`,
+`GOOGLE_AUTH`, `GOOGLE_CLIENT_ID` and `GOOGLE_API_KEY`. The Angular compiler
+**writes them into the JavaScript bundle** that ships to the browser, where anyone
+can read them, so there is no way to hide a value there.
 
 Only publishable identifiers belong in the frontend: a Stripe publishable key, an
-OAuth client ID, an API base URL. See [src/frontend/.env.example](src/frontend/.env.example).
-
-Copy it to `.env.local` (gitignored) to set real values:
-
-```bash
-cd src/frontend
-cp .env.example .env.local
-```
+OAuth client ID. Defaults live under `define` in `src/frontend/angular.json`, and
+the Docker image takes real values as build arguments. See
+[src/frontend/README.md](src/frontend/README.md).
 
 ### In production
 
@@ -147,8 +145,8 @@ rather than running insecurely.
 ## Testing
 
 ```bash
-dotnet test                          # 96 backend tests
-cd src/frontend && npm run test      # 265 frontend tests
+dotnet test                          # 100 backend tests (Docker must be running)
+cd src/frontend && npm test          # 35 frontend tests
 cd src/frontend && npm run lint
 ```
 
@@ -203,7 +201,7 @@ src/
   Shared/
     Shared.Kernel/          Money, PagedResult, exceptions, diagnostics
     Shared.Abstractions/    IStorage, IContentStorage, ICacheStore
-  frontend/                 React SPA
+  frontend/                 Angular SPA
 tests/
   UnitTests/                Domain and service unit tests
   IntegrationTests/         Full HTTP tests against a real SQL Server container

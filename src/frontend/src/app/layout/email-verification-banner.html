@@ -1,0 +1,16 @@
+    @if (auth.isAuthenticated() && !auth.isEmailVerified()) {
+      <div class="bg-signal border-b-2 border-ink px-5 sm:px-6 py-2.5 flex items-center gap-3 text-[13px]">
+        <span class="t-micro bg-ink text-signal px-2 py-1 shrink-0">Unverified</span>
+        <span class="text-ink flex-1 font-medium">Verify your email to unlock purchases and publishing.</span>
+        @if (sent()) {
+          <span class="t-label text-ink shrink-0">Sent</span>
+        } @else if (sendError()) {
+          <span class="text-danger font-medium">{{ sendError()!.detail ?? sendError()!.message ?? 'Failed to resend.' }}</span>
+        } @else {
+          <button (click)="resend()" [disabled]="sending()" class="t-label text-ink underline underline-offset-4 decoration-2 hover:text-cobalt-deep disabled:opacity-50 shrink-0">
+            {{ sending() ? 'Sending…' : 'Resend email' }}
+          </button>
+        }
+      </div>
+    }
+  

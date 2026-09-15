@@ -142,7 +142,7 @@ public static class AuthEndpoints
                 IConfiguration cfg,
                 CancellationToken ct) =>
             {
-                var frontendUrl = cfg["Cors:FrontendOrigin"] ?? "http://localhost:5173";
+                var frontendUrl = cfg["Cors:FrontendOrigin"] ?? "http://localhost:4200";
 
                 var result = await http.AuthenticateAsync("External");
                 if (!result.Succeeded || result.Principal is null)
@@ -217,7 +217,7 @@ public static class AuthEndpoints
             Log.Information("User registered {UserId} {Email}", user.Id, LogSanitizer.MaskEmail(emailValue));
 
             // Send verification email (fire-and-forget — don't fail registration if email fails)
-            var frontendUrl = cfg["Cors:FrontendOrigin"] ?? "http://localhost:5173";
+            var frontendUrl = cfg["Cors:FrontendOrigin"] ?? "http://localhost:4200";
             var verifyUrl = $"{http.Request.Scheme}://{http.Request.Host}/api/auth/verify-email?token={Uri.EscapeDataString(user.VerificationToken!)}";
             _ = emailSvc.SendAsync(user.Email.Value, "Verify your KnowledgeMarket email",
                 EmailTemplates.VerifyEmail(verifyUrl), ct);
@@ -296,7 +296,7 @@ public static class AuthEndpoints
             IConfiguration cfg,
             CancellationToken ct) =>
         {
-            var frontendUrl = cfg["Cors:FrontendOrigin"] ?? "http://localhost:5173";
+            var frontendUrl = cfg["Cors:FrontendOrigin"] ?? "http://localhost:4200";
 
             if (string.IsNullOrWhiteSpace(token))
                 return Results.Redirect($"{frontendUrl}/verify-email?error=invalid");
@@ -333,7 +333,7 @@ public static class AuthEndpoints
             user.RegenerateVerificationToken();
             await db.SaveChangesAsync(ct);
 
-            var frontendUrl = cfg["Cors:FrontendOrigin"] ?? "http://localhost:5173";
+            var frontendUrl = cfg["Cors:FrontendOrigin"] ?? "http://localhost:4200";
             var verifyUrl = $"{frontendUrl}/verify-email?token={Uri.EscapeDataString(user.VerificationToken!)}";
             _ = email.SendAsync(user.Email.Value, "Verify your KnowledgeMarket email",
                 EmailTemplates.VerifyEmail(verifyUrl), ct);
@@ -364,7 +364,7 @@ public static class AuthEndpoints
 
                     Log.Information("Password reset requested for user {UserId}", user.Id);
 
-                    var frontendUrl = cfg["Cors:FrontendOrigin"] ?? "http://localhost:5173";
+                    var frontendUrl = cfg["Cors:FrontendOrigin"] ?? "http://localhost:4200";
                     var resetUrl = $"{frontendUrl}/reset-password?token={Uri.EscapeDataString(rawResetToken)}";
                     _ = emailSvc.SendAsync(user.Email.Value, "Reset your KnowledgeMarket password",
                         EmailTemplates.PasswordReset(resetUrl), ct);

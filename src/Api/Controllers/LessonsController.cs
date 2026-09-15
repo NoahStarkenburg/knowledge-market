@@ -102,6 +102,10 @@ public sealed class LessonsController(
     [HttpPost("upload")]
     [EnableRateLimiting("upload")]
     [Consumes("multipart/form-data")]
+    // Kestrel caps request bodies at about 28.6 MB and multipart bodies at 128 MB by default, so
+    // without raising both here the 500 MB limit below could never actually be reached.
+    [RequestSizeLimit(UploadLimits.LessonFileBytes + UploadLimits.MultipartOverheadBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = UploadLimits.LessonFileBytes + UploadLimits.MultipartOverheadBytes)]
     public async Task<IActionResult> Upload(Guid courseId, IFormFile file, CancellationToken ct)
     {
         if (!currentUser.IsAuthenticated) return Unauthorized();
@@ -111,9 +115,8 @@ public sealed class LessonsController(
         if (file is null) return BadRequest(new { error = "missing file", field = "file" });
         if (file.Length <= 0) return BadRequest(new { error = "empty file", field = "file" });
 
-        const long maxSizeBytes = 500L * 1024L * 1024L; // 500 MB
-        if (file.Length > maxSizeBytes)
-            return BadRequest(new { error = "file too large", maxBytes = maxSizeBytes });
+        if (file.Length > UploadLimits.LessonFileBytes)
+            return BadRequest(new { error = "file too large", maxBytes = UploadLimits.LessonFileBytes });
 
         var contentType = string.IsNullOrWhiteSpace(file.ContentType)
             ? "application/octet-stream"

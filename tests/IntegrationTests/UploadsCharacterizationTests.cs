@@ -17,14 +17,16 @@ public class UploadsCharacterizationTests
 
     private static string NewEmail(string prefix) => $"{prefix}-{Guid.NewGuid():N}@test.local";
 
-    private async Task<HttpClient> AuthedClientAsync(string email)
+    private async Task<HttpClient> AuthedClientAsync(string email) => (await RegisterAsync(email)).Client;
+
+    private async Task<(HttpClient Client, Guid UserId)> RegisterAsync(string email)
     {
         var client = _factory.CreateClient();
         var resp = await client.PostAsJsonAsync("/api/auth/register", new { email, password = "Password123!" });
         resp.EnsureSuccessStatusCode();
         var body = await resp.Content.ReadFromJsonAsync<JsonElement>();
         client.DefaultRequestHeaders.Add("X-CSRF", body.GetProperty("csrf").GetString());
-        return client;
+        return (client, body.GetProperty("userId").GetGuid());
     }
 
     private static async Task<Guid> CreateCourseAsync(HttpClient client, string title)
@@ -123,6 +125,78 @@ public class UploadsCharacterizationTests
         using var form = FileForm(Encoding.UTF8.GetBytes("not an image"), "text/plain", "thumb.txt");
         var resp = await client.PutAsync($"/api/courses/{courseId}/thumbnail", form);
         Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task Thumbnail_confirm_is_forbidden_for_non_owner()
+    {
+        var owner = await AuthedClientAsync(NewEmail("owner"));
+        var courseId = await CreateCourseAsync(owner, "Confirm Owner Course");
+
+        var (stranger, strangerId) = await RegisterAsync(NewEmail("stranger"));
+        var resp = await stranger.PostAsJsonAsync($"/api/courses/{courseId}/thumbnail/confirm",
+            new { key = $"staged/{strangerId:n}/x/cover.png", fileName = "cover.png", contentType = "image/png" });
+
+        Assert.Equal(HttpStatusCode.Forbidden, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task Thumbnail_confirm_rejects_a_key_issued_to_another_user()
+    {
+        var owner = await AuthedClientAsync(NewEmail("owner"));
+        var courseId = await CreateCourseAsync(owner, "Foreign Key Course");
+
+        var resp = await owner.PostAsJsonAsync($"/api/courses/{courseId}/thumbnail/confirm",
+            new { key = "staged/deadbeefdeadbeefdeadbeefdeadbeef/x/cover.png", fileName = "cover.png", contentType = "image/png" });
+
+        Assert.Equal(HttpStatusCode.Forbidden, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task Thumbnail_confirm_rejects_a_non_image()
+    {
+        var (owner, ownerId) = await RegisterAsync(NewEmail("owner"));
+        var courseId = await CreateCourseAsync(owner, "Non Image Course");
+
+        var resp = await owner.PostAsJsonAsync($"/api/courses/{courseId}/thumbnail/confirm",
+            new { key = $"staged/{ownerId:n}/x/page.svg", fileName = "page.svg", contentType = "image/svg+xml" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task Intro_video_confirm_rejects_a_non_video()
+    {
+        var (owner, ownerId) = await RegisterAsync(NewEmail("owner"));
+        var courseId = await CreateCourseAsync(owner, "Non Video Course");
+
+        var resp = await owner.PostAsJsonAsync($"/api/courses/{courseId}/intro-video/confirm",
+            new { key = $"staged/{ownerId:n}/x/notes.pdf", fileName = "notes.pdf", contentType = "application/pdf" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task Media_confirm_reports_an_upload_that_never_reached_storage()
+    {
+        var (owner, ownerId) = await RegisterAsync(NewEmail("owner"));
+        var courseId = await CreateCourseAsync(owner, "Missing Upload Course");
+
+        var resp = await owner.PostAsJsonAsync($"/api/courses/{courseId}/thumbnail/confirm",
+            new { key = $"staged/{ownerId:n}/x/cover.png", fileName = "cover.png", contentType = "image/png" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task Media_confirm_for_an_unknown_course_is_not_found()
+    {
+        var (client, userId) = await RegisterAsync(NewEmail("owner"));
+
+        var resp = await client.PostAsJsonAsync($"/api/courses/{Guid.NewGuid()}/intro-video/confirm",
+            new { key = $"staged/{userId:n}/x/intro.mp4", fileName = "intro.mp4", contentType = "video/mp4" });
+
+        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
     }
 
     [Fact]

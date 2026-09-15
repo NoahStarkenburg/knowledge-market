@@ -91,6 +91,14 @@ namespace Infrastructure.Storage
         public Task<long?> TryGetObjectSizeAsync(string _, CancellationToken __)
             => Task.FromResult<long?>(null);
 
+        public Task DeleteObjectAsync(string key, CancellationToken _)
+        {
+            var fullPath = FullPath(key);
+            if (File.Exists(fullPath))
+                File.Delete(fullPath);
+            return Task.CompletedTask;
+        }
+
         public async Task DeleteAsync(Guid contentFileId, CancellationToken ct)
         {
             var file = await db.ContentFiles

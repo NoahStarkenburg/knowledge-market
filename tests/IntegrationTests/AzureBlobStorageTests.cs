@@ -1,6 +1,10 @@
 using System.Net;
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using System.Text;
+using System.Text.Json;
+using Application.Abstractions;
+using Application.Uploads;
 using Azure.Storage.Blobs;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
@@ -10,6 +14,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Shared.Abstractions;
+using Shared.Kernel;
 
 namespace IntegrationTests;
 
@@ -173,6 +178,73 @@ public sealed class AzureBlobStorageTests(ApiFactory factory) : IAsyncLifetime
 
         Assert.Equal("# Edited", await content.ReadLessonBodyAsync(key, CancellationToken.None));
         Assert.Null(await content.ReadLessonBodyAsync($"{Guid.NewGuid():n}/missing.md", CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Direct_thumbnail_upload_is_confirmed_and_set_on_the_course()
+    {
+        var (userId, courseId) = await CreateCourseAsync();
+        using var scope = factory.Services.CreateScope();
+        var (_, uploads, media) = UploadServices(scope);
+
+        var presign = await uploads.PresignAsync(userId, new PresignRequest("cover.png", "image/png"), CancellationToken.None);
+        Assert.Equal("direct", presign.Mode);
+        var put = await Http.SendAsync(PutRequest(new PresignedUpload(presign.UploadUrl!, presign.Key!, presign.Headers!), [0x89, 0x50, 0x4E, 0x47]));
+        Assert.Equal(HttpStatusCode.Created, put.StatusCode);
+
+        var fileId = await uploads.ConfirmThumbnailAsync(courseId, userId,
+            new ConfirmRequest(presign.Key!, "cover.png", "image/png"), CancellationToken.None);
+
+        Assert.Equal(fileId, await media.GetThumbnailFileIdAsync(courseId, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Oversized_direct_thumbnail_is_rejected_and_deleted_from_storage()
+    {
+        var (userId, courseId) = await CreateCourseAsync();
+        using var scope = factory.Services.CreateScope();
+        var (storage, uploads, media) = UploadServices(scope);
+
+        // Storage cannot enforce a size on a SAS upload, so a client can send more than the limit.
+        var presign = await uploads.PresignAsync(userId, new PresignRequest("huge.png", "image/png"), CancellationToken.None);
+        var tooBig = new byte[UploadLimits.ThumbnailBytes + 1];
+        var put = await Http.SendAsync(PutRequest(new PresignedUpload(presign.UploadUrl!, presign.Key!, presign.Headers!), tooBig));
+        Assert.Equal(HttpStatusCode.Created, put.StatusCode);
+
+        var error = await Assert.ThrowsAsync<BadRequestException>(() => uploads.ConfirmThumbnailAsync(courseId, userId,
+            new ConfirmRequest(presign.Key!, "huge.png", "image/png"), CancellationToken.None));
+
+        Assert.Equal("file too large", error.Message);
+        Assert.Null(await storage.TryGetObjectSizeAsync(presign.Key!, CancellationToken.None));
+        Assert.Null(await media.GetThumbnailFileIdAsync(courseId, CancellationToken.None));
+    }
+
+    // The upload service wired to Azurite, with the real repositories from the API's container.
+    private (AzureBlobStorage Storage, UploadService Uploads, IMediaRepository Media) UploadServices(IServiceScope scope)
+    {
+        var sp = scope.ServiceProvider;
+        var storage = new AzureBlobStorage(_service, new AzureBlobSasSigner(_service, _cfg), sp.GetRequiredService<ContentDbContext>(), _cfg);
+        var media = sp.GetRequiredService<IMediaRepository>();
+        var uploads = new UploadService(storage, sp.GetRequiredService<IContentRepository>(), media, sp.GetRequiredService<ICacheStore>());
+        return (storage, uploads, media);
+    }
+
+    // A real user and course created through the API, because confirming media checks ownership.
+    private async Task<(Guid UserId, Guid CourseId)> CreateCourseAsync()
+    {
+        var client = factory.CreateClient();
+        var register = await client.PostAsJsonAsync("/api/auth/register",
+            new { email = $"media-{Guid.NewGuid():N}@test.local", password = "Password123!" });
+        register.EnsureSuccessStatusCode();
+        var user = await register.Content.ReadFromJsonAsync<JsonElement>();
+        client.DefaultRequestHeaders.Add("X-CSRF", user.GetProperty("csrf").GetString());
+
+        var course = await client.PostAsJsonAsync("/api/courses",
+            new { title = "Media Course", description = "d", priceAmount = 0m, priceCurrency = "USD", tags = Array.Empty<string>() });
+        course.EnsureSuccessStatusCode();
+        var created = await course.Content.ReadFromJsonAsync<JsonElement>();
+
+        return (user.GetProperty("userId").GetGuid(), created.GetProperty("id").GetGuid());
     }
 
     private static HttpRequestMessage PutRequest(PresignedUpload upload, byte[] bytes)

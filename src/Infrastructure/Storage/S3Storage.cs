@@ -121,6 +121,9 @@ namespace Infrastructure.Storage
             }
         }
 
+        public Task DeleteObjectAsync(string key, CancellationToken ct) =>
+            _s3.DeleteObjectAsync(_bucket, key, ct);
+
         public async Task<Stream> OpenReadAsync(Guid contentFileId, CancellationToken ct)
         {
             var key = await _db.ContentFiles.AsNoTracking()

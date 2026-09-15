@@ -107,5 +107,10 @@ EXPOSE 8080
 
 # wget comes from busybox in the Alpine base, so no package needs installing.
 # Hits /healthz, which returns a fixed string rather than the app shell.
+#
+# 127.0.0.1, not localhost. The image's /etc/hosts maps localhost to both
+# 127.0.0.1 and ::1, busybox wget tries ::1 first, and nginx listens on IPv4
+# only (`listen 8080`). With localhost the check is refused and the container
+# is reported unhealthy while it serves traffic perfectly well.
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget -q --spider http://localhost:8080/healthz || exit 1
+  CMD wget -q --spider http://127.0.0.1:8080/healthz || exit 1

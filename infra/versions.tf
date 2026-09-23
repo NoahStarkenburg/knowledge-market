@@ -23,5 +23,12 @@ terraform {
       source  = "hashicorp/random"
       version = "~> 3.9"
     }
+    # azapi sends a resource body straight to the Azure Resource Manager API. It
+    # covers settings azurerm has no attribute for yet; here, only the Azure SQL
+    # free offer (database.tf).
+    azapi = {
+      source  = "Azure/azapi"
+      version = "~> 2.12"
+    }
   }
 }

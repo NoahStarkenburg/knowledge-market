@@ -29,3 +29,34 @@ variable "tags" {
     managed_by = "terraform"
   }
 }
+
+variable "admin_email" {
+  description = "Sign-in email of the admin account the API creates on its first start. Its password is generated into Key Vault."
+  type        = string
+
+  # No default, and not in any committed file: set it as TF_VAR_admin_email, the
+  # same way ARM_SUBSCRIPTION_ID is kept out of the repository.
+}
+
+variable "api_min_replicas" {
+  description = "API replicas kept running with no traffic. 1 means no cold start on the first request; 0 costs nothing while idle."
+  type        = number
+  default     = 1
+
+  validation {
+    condition     = contains([0, 1], var.api_min_replicas)
+    error_message = "api_min_replicas must be 0 or 1. The API allows one replica at most while it migrates the database at startup."
+  }
+}
+
+variable "enable_redis" {
+  description = "Create Azure Managed Redis for the API's cache. When false the API runs with no cache and every read goes to SQL."
+  type        = bool
+  default     = true
+}
+
+variable "sql_private_endpoint" {
+  description = "Reach Azure SQL through a private endpoint inside the virtual network (about $7 a month). When false, SQL keeps a public endpoint open to Azure services only, still with Entra ID sign-in only."
+  type        = bool
+  default     = true
+}

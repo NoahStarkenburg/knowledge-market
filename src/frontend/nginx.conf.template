@@ -134,6 +134,11 @@ server {
         # thumbnail (5 MB), with room to spare.
         client_max_body_size 10m;
 
+        # How long to wait for the API to answer. The default of 60 seconds is about how long a paused
+        # Azure SQL database takes to resume, and the API holds the request open while it does (see
+        # SqlConnectionRetryInterceptor), so nginx would give up just before the answer arrived.
+        proxy_read_timeout 120s;
+
         # Host must be the API's OWN name. Container Apps' internal ingress
         # routes by Host header: forward the public hostname and it cannot tell
         # which app the request is for. The public hostname travels separately

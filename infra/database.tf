@@ -33,10 +33,11 @@ resource "azurerm_mssql_server" "main" {
 # body below is the Azure Resource Manager API's own format, the same JSON the
 # portal sends.
 #
-# Serverless: the database pauses after an idle period and resumes on the next
-# connection, which takes up to a minute. While paused it uses no compute. With
-# freeLimitExhaustionBehavior = AutoPause, running out of free compute pauses it
-# until the next month instead of billing.
+# Serverless: the database pauses after an hour without connections and resumes
+# on the next one, which takes up to a minute. While paused it uses no compute.
+# With freeLimitExhaustionBehavior = AutoPause, running out of free compute
+# pauses it until the next month instead of billing. The free offer only allows
+# the default pause delay with that setting, so autoPauseDelay is not set.
 resource "azapi_resource" "database" {
   type      = "Microsoft.Sql/servers/databases@2023-08-01"
   name      = "km"
@@ -55,7 +56,6 @@ resource "azapi_resource" "database" {
       useFreeLimit                     = true
       freeLimitExhaustionBehavior      = "AutoPause"
       minCapacity                      = 0.5
-      autoPauseDelay                   = 15
       maxSizeBytes                     = 34359738368
       requestedBackupStorageRedundancy = "Local"
     }

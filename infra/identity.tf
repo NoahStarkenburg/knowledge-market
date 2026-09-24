@@ -7,9 +7,9 @@
 # Their roles are granted first, so a new app can pull its image and read its
 # Key Vault secrets on its very first start.
 #
-# One identity per app. The web container can pull its own image and nothing
-# else, so if nginx were ever compromised it would hold no path to the database,
-# storage or secrets.
+# One identity per app. The web container's identity can only pull images from
+# our registry, so if nginx were ever compromised it would hold no path to the
+# database, storage or secrets.
 
 resource "azurerm_user_assigned_identity" "api" {
   name                = "${var.prefix}-api-id"

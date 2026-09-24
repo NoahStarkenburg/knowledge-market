@@ -22,3 +22,6 @@ provider "azurerm" {
   # locked-down state storage account and the app's own storage.
   storage_use_azuread = true
 }
+
+# Logs in the same way as azurerm, and also reads ARM_SUBSCRIPTION_ID.
+provider "azapi" {}

@@ -60,3 +60,9 @@ variable "sql_private_endpoint" {
   type        = bool
   default     = true
 }
+
+variable "enable_front_door" {
+  description = "Put Azure Front Door (edge caching, firewall rate limits) in front of the site, and accept web traffic only through it. About $35 a month; when false the web app is public on its own address."
+  type        = bool
+  default     = true
+}

@@ -33,8 +33,10 @@ resource "azurerm_container_app_environment" "main" {
 }
 
 locals {
-  # The address people browse to. Front Door replaces it in a later change.
-  public_origin = "https://${var.prefix}-web.${azurerm_container_app_environment.main.default_domain}"
+  # The address people browse to: Front Door's, or the web app's own without it.
+  public_origin = (var.enable_front_door
+    ? "https://${azurerm_cdn_frontdoor_endpoint.main[0].host_name}"
+  : "https://${var.prefix}-web.${azurerm_container_app_environment.main.default_domain}")
 
   # Each app's FIRST revision runs the image with this tag, pushed by hand on
   # the first deploy. After that the deploy pipeline rolls out new images and
@@ -260,6 +262,17 @@ resource "azurerm_container_app" "web" {
       latest_revision = true
       percentage      = 100
     }
+
+    # With Front Door, accept connections from Front Door's IP ranges only
+    # (see frontdoor.tf). Anything else is refused before it reaches nginx.
+    dynamic "ip_security_restriction" {
+      for_each = var.enable_front_door ? data.azurerm_network_service_tags.front_door[0].ipv4_cidrs : []
+      content {
+        name             = "front-door-${ip_security_restriction.key}"
+        ip_address_range = ip_security_restriction.value
+        action           = "Allow"
+      }
+    }
   }
 
   template {
@@ -285,8 +298,15 @@ resource "azurerm_container_app" "web" {
         value = azurerm_container_app.api.ingress[0].fqdn
       }
 
-      # FRONT_DOOR_ID stays empty, so nginx accepts requests from anywhere,
-      # until Front Door exists.
+      # nginx serves only requests carrying this Front Door ID in X-Azure-FDID.
+      # Without Front Door it is left unset and nginx accepts every request.
+      dynamic "env" {
+        for_each = var.enable_front_door ? [azurerm_cdn_frontdoor_profile.main[0].resource_guid] : []
+        content {
+          name  = "FRONT_DOOR_ID"
+          value = env.value
+        }
+      }
 
       startup_probe {
         transport = "HTTP"

@@ -20,6 +20,7 @@ using Infrastructure.Payments;
 using Infrastructure.Storage;
 using Infrastructure.Catalog;
 using Infrastructure.Content;
+using Infrastructure.Database;
 using Infrastructure.Identity;
 using Infrastructure.Orders;
 using Microsoft.AspNetCore.Antiforgery;
@@ -218,27 +219,32 @@ builder.Services.AddSingleton<AppMetrics>();
 builder.Services.AddDbContext<UsersDbContext>(opt =>
 {
     var conn = builder.Configuration.GetConnectionString("Default");
-    opt.UseSqlServer(conn, b => b.MigrationsHistoryTable("__EFMigrationsHistory", "identity"));
+    opt.UseSqlServer(conn, b => b.MigrationsHistoryTable("__EFMigrationsHistory", "identity"))
+       .AddInterceptors(SqlConnectionRetryInterceptor.Instance);
 });
 builder.Services.AddDbContext<CatalogDbContext>(opt =>
 {
     var conn = builder.Configuration.GetConnectionString("Default");
-    opt.UseSqlServer(conn, b => b.MigrationsHistoryTable("__EFMigrationsHistory", "catalog"));
+    opt.UseSqlServer(conn, b => b.MigrationsHistoryTable("__EFMigrationsHistory", "catalog"))
+       .AddInterceptors(SqlConnectionRetryInterceptor.Instance);
 });
 builder.Services.AddDbContext<OrdersDbContext>(opt =>
 {
     var conn = builder.Configuration.GetConnectionString("Default");
-    opt.UseSqlServer(conn, b => b.MigrationsHistoryTable("__EFMigrationsHistory", "orders"));
+    opt.UseSqlServer(conn, b => b.MigrationsHistoryTable("__EFMigrationsHistory", "orders"))
+       .AddInterceptors(SqlConnectionRetryInterceptor.Instance);
 });
 builder.Services.AddDbContext<ContentDbContext>(opt =>
 {
     var conn = builder.Configuration.GetConnectionString("Default");
-    opt.UseSqlServer(conn, b => b.MigrationsHistoryTable("__EFMigrationsHistory", "content"));
+    opt.UseSqlServer(conn, b => b.MigrationsHistoryTable("__EFMigrationsHistory", "content"))
+       .AddInterceptors(SqlConnectionRetryInterceptor.Instance);
 });
 builder.Services.AddDbContext<Infrastructure.Cart.CartDbContext>(opt =>
 {
     var conn = builder.Configuration.GetConnectionString("Default");
-    opt.UseSqlServer(conn, b => b.MigrationsHistoryTable("__EFMigrationsHistory", "carts"));
+    opt.UseSqlServer(conn, b => b.MigrationsHistoryTable("__EFMigrationsHistory", "carts"))
+       .AddInterceptors(SqlConnectionRetryInterceptor.Instance);
 });
 
 // Distributed cache (Redis). Optional: when Redis is configured (a local connection string, or an

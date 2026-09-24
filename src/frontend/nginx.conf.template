@@ -32,12 +32,15 @@
 # because map is only allowed at http level, which is where conf.d files land.
 #
 # Front Door sets X-Azure-ClientIP to the address of the socket that connected
-# to it. Unlike X-Forwarded-For, a client cannot pre-seed it with a fake value.
-# When it is absent — local runs, no Front Door — fall back to the address that
-# connected to nginx.
-map $http_x_azure_clientip $client_ip {
-    ""      $remote_addr;
-    default $http_x_azure_clientip;
+# to it, overwriting anything the client sent. That only holds for requests our
+# Front Door relayed: anyone who reaches nginx directly can send the header with
+# any address, and the API's per-IP rate limits would count every made-up
+# address separately. So it is believed only when FRONT_DOOR_ID is set and the
+# request carries exactly that ID ($from_front_door is 1 AND the ID is not
+# empty, below). Otherwise the client is whatever connected to nginx.
+map "$from_front_door|$http_x_azure_fdid|$http_x_azure_clientip" $client_ip {
+    default                          $remote_addr;
+    "~^1\|[^|]+\|(?<fd_client>.+)$"  $fd_client;
 }
 
 # Front Door and Container Apps terminate HTTPS before nginx, so nginx itself

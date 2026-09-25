@@ -36,6 +36,13 @@ variable "admin_email" {
 
   # No default, and not in any committed file: set it as TF_VAR_admin_email, the
   # same way ARM_SUBSCRIPTION_ID is kept out of the repository.
+
+  # Caught here, at plan time. An empty value would otherwise reach the API,
+  # which refuses to start in Production without one.
+  validation {
+    condition     = can(regex("^[^@ ]+@[^@ ]+[.][^@ ]+$", var.admin_email))
+    error_message = "admin_email must be an email address. Set it with $env:TF_VAR_admin_email = \"you@example.com\"."
+  }
 }
 
 variable "api_min_replicas" {

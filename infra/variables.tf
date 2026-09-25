@@ -73,3 +73,26 @@ variable "enable_front_door" {
   type        = bool
   default     = true
 }
+
+variable "stripe_enabled" {
+  description = "Turn on Stripe checkout. The secret key and webhook signing secret must already be in Key Vault as stripe-secret-key and stripe-webhook-secret. Their values never pass through Terraform."
+  type        = bool
+  default     = false
+}
+
+variable "stripe_publishable_key" {
+  description = "Stripe publishable key (pk_test_... or pk_live_...). Public by design: it is also compiled into the front end."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = !var.stripe_enabled || can(regex("^pk_(test|live)_", var.stripe_publishable_key))
+    error_message = "stripe_publishable_key must be set (pk_test_... or pk_live_...) when stripe_enabled is true."
+  }
+}
+
+variable "stripe_subscription_price_id" {
+  description = "Stripe price ID (price_...) of the monthly subscription. Leave empty to offer one-time purchases only."
+  type        = string
+  default     = ""
+}

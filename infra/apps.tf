@@ -102,6 +102,18 @@ resource "azurerm_container_app" "api" {
     value = azurerm_application_insights.main.connection_string
   }
 
+  # Stripe's secret key and webhook signing secret. They are put in Key Vault by
+  # hand and referenced here by name only, so their values never pass through
+  # Terraform or its state.
+  dynamic "secret" {
+    for_each = var.stripe_enabled ? toset(["stripe-secret-key", "stripe-webhook-secret"]) : toset([])
+    content {
+      name                = secret.value
+      key_vault_secret_id = "${azurerm_key_vault.main.vault_uri}secrets/${secret.value}"
+      identity            = azurerm_user_assigned_identity.api.id
+    }
+  }
+
   ingress {
     # Internal: reachable only from inside the environment, which means nginx.
     external_enabled = false
@@ -174,10 +186,10 @@ resource "azurerm_container_app" "api" {
         name  = "Storage__AzureBlob__ServiceUri"
         value = azurerm_storage_account.files.primary_blob_endpoint
       }
-      # Checkout stays off until the Stripe webhook for the live address exists.
+      # Checkout is off until stripe_enabled is set (see variables.tf).
       env {
         name  = "Stripe__Disabled"
-        value = "true"
+        value = tostring(!var.stripe_enabled)
       }
       env {
         name        = "APPLICATIONINSIGHTS_CONNECTION_STRING"
@@ -188,6 +200,28 @@ resource "azurerm_container_app" "api" {
         content {
           name  = "Redis__Host"
           value = "${env.value}:10000"
+        }
+      }
+      # Last in the list: Terraform compares env blocks by position, so adding
+      # these at the end shows up in a plan as additions, not as renames.
+      dynamic "env" {
+        for_each = var.stripe_enabled ? tomap({
+          Stripe__SecretKey     = "stripe-secret-key"
+          Stripe__WebhookSecret = "stripe-webhook-secret"
+        }) : tomap({})
+        content {
+          name        = env.key
+          secret_name = env.value
+        }
+      }
+      dynamic "env" {
+        for_each = var.stripe_enabled ? merge(
+          { Stripe__PublishableKey = var.stripe_publishable_key },
+          var.stripe_subscription_price_id == "" ? {} : { Stripe__SubscriptionPriceId = var.stripe_subscription_price_id },
+        ) : {}
+        content {
+          name  = env.key
+          value = env.value
         }
       }
 

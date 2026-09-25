@@ -47,17 +47,17 @@ locals {
   # No password: "Active Directory Managed Identity" makes SqlClient sign in as
   # the identity whose client ID is given as User Id.
   #
-  # Connect Timeout is 60 seconds rather than the default 15. Opening a
-  # connection to the paused database waits while it resumes, which took about
-  # 15 seconds on the first deploy, and a timeout is not an error SqlClient
-  # retries.
+  # Connect Timeout is 90 seconds rather than the default 15. Opening a
+  # connection to the paused database waits while it resumes, which took 60
+  # seconds on the first deploy, and a timeout is not an error SqlClient
+  # retries. nginx and Front Door wait up to 120 seconds.
   sql_connection_string = join(";", [
     "Server=tcp:${azurerm_mssql_server.main.fully_qualified_domain_name},1433",
     "Database=${azapi_resource.database.name}",
     "Authentication=Active Directory Managed Identity",
     "User Id=${azurerm_user_assigned_identity.api.client_id}",
     "Encrypt=True",
-    "Connect Timeout=60",
+    "Connect Timeout=90",
   ])
 }
 

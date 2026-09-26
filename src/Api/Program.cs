@@ -382,6 +382,13 @@ builder.Services.AddScoped<Application.Cart.ICartService, Application.Cart.CartS
 var emailProvider = builder.Configuration["Email:Provider"] ?? "null";
 if (emailProvider == "smtp")
     builder.Services.AddScoped<IEmailService, SmtpEmailService>();
+else if (emailProvider == "acs")
+{
+    // Azure Communication Services, signed into with the managed identity (AZURE_CLIENT_ID picks it).
+    var acsEndpoint = builder.Configuration["Email:Acs:Endpoint"];
+    builder.Services.AddSingleton(_ => new Azure.Communication.Email.EmailClient(new Uri(acsEndpoint!), new DefaultAzureCredential()));
+    builder.Services.AddScoped<IEmailService, AcsEmailService>();
+}
 else
     builder.Services.AddScoped<IEmailService, NullEmailService>();
 

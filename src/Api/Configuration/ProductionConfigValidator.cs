@@ -45,6 +45,12 @@ public static class ProductionConfigValidator
         if ((cfg["Redis:ConnectionString"] ?? "").Contains("password", StringComparison.OrdinalIgnoreCase))
             problems.Add("Redis:ConnectionString carries a password; use Redis:Host with a managed identity");
 
+        if (cfg["Email:Provider"] == "acs")
+        {
+            Check(cfg["Email:Acs:Endpoint"], "Email:Acs:Endpoint", minLength: 12, problems);
+            Check(cfg["Email:From"], "Email:From", minLength: 5, problems);
+        }
+
         // Stripe is required in Production unless explicitly opted out with Stripe:Disabled=true.
         // This prevents a silent "deployed without Stripe" failure mode where the API boots but
         // checkout endpoints would throw 500 at runtime.

@@ -224,6 +224,19 @@ resource "azurerm_container_app" "api" {
           value = env.value
         }
       }
+      # Verification, password reset and receipt emails (email.tf).
+      env {
+        name  = "Email__Provider"
+        value = "acs"
+      }
+      env {
+        name  = "Email__Acs__Endpoint"
+        value = "https://${azurerm_communication_service.main.hostname}"
+      }
+      env {
+        name  = "Email__From"
+        value = "DoNotReply@${azurerm_email_communication_service_domain.azure_managed.from_sender_domain}"
+      }
 
       # Probes: how Container Apps decides the container is healthy.
       #
@@ -268,6 +281,7 @@ resource "azurerm_container_app" "api" {
     azurerm_role_assignment.api_key_vault,
     azurerm_role_assignment.api_blob,
     azurerm_managed_redis_access_policy_assignment.api,
+    azurerm_role_assignment.api_email,
   ]
 
   tags = var.tags

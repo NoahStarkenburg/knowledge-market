@@ -1,7 +1,7 @@
     @if (auth.isAuthenticated() && !auth.isEmailVerified()) {
       <div class="bg-signal border-b-2 border-ink px-5 sm:px-6 py-2.5 flex items-center gap-3 text-[13px]">
         <span class="t-micro bg-ink text-signal px-2 py-1 shrink-0">Unverified</span>
-        <span class="text-ink flex-1 font-medium">Verify your email to unlock purchases and publishing.</span>
+        <span class="text-ink flex-1 font-medium">Please verify your email address. We sent you a link when you signed up.</span>
         @if (sent()) {
           <span class="t-label text-ink shrink-0">Sent</span>
         } @else if (sendError()) {

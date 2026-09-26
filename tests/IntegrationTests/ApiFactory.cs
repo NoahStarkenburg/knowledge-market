@@ -8,14 +8,16 @@ using Testcontainers.MsSql;
 
 namespace IntegrationTests;
 
-// Boots the real API against a throwaway SQL Server container. External payment calls are
-// replaced with a deterministic fake; everything else (auth, EF, migrations, CSRF) is real.
+// Boots the real API against a throwaway SQL Server container. External payment calls and
+// outgoing email are replaced with fakes; everything else (auth, EF, migrations, CSRF) is real.
 // Requires Docker to be running.
 public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     private readonly MsSqlContainer _db = new MsSqlBuilder()
         .WithImage("mcr.microsoft.com/mssql/server:2022-latest")
         .Build();
+
+    public RecordingEmailService Emails { get; } = new();
 
     public async Task InitializeAsync()
     {
@@ -46,6 +48,8 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         {
             services.RemoveAll<IPaymentService>();
             services.AddScoped<IPaymentService, FakePaymentService>();
+            services.RemoveAll<IEmailService>();
+            services.AddSingleton<IEmailService>(Emails);
         });
     }
 

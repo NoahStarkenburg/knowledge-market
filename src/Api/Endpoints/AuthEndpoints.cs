@@ -334,7 +334,7 @@ public static class AuthEndpoints
             await db.SaveChangesAsync(ct);
 
             var frontendUrl = cfg["Cors:FrontendOrigin"] ?? "http://localhost:4200";
-            var verifyUrl = $"{frontendUrl}/verify-email?token={Uri.EscapeDataString(user.VerificationToken!)}";
+            var verifyUrl = $"{frontendUrl}/api/auth/verify-email?token={Uri.EscapeDataString(user.VerificationToken!)}";
             _ = email.SendAsync(user.Email.Value, "Verify your KnowledgeMarket email",
                 EmailTemplates.VerifyEmail(verifyUrl), ct);
 

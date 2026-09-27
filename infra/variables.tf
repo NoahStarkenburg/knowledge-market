@@ -74,6 +74,17 @@ variable "enable_front_door" {
   default     = true
 }
 
+variable "load_test_allowed_ips" {
+  description = "Addresses, in CIDR form such as 203.0.113.7/32, that Front Door's rate limits let through, for a load test run from a known machine. Leave empty. Pass it on the command line for the length of a test only, and never commit an address."
+  type        = list(string)
+  default     = []
+
+  validation {
+    condition     = alltrue([for c in var.load_test_allowed_ips : can(cidrhost(c, 0))])
+    error_message = "Each entry must be an address in CIDR form, such as 203.0.113.7/32."
+  }
+}
+
 variable "stripe_enabled" {
   description = "Turn on Stripe checkout. The secret key and webhook signing secret must already be in Key Vault as stripe-secret-key and stripe-webhook-secret. Their values never pass through Terraform."
   type        = bool

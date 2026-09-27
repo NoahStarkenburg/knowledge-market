@@ -110,6 +110,10 @@ resource "azurerm_cdn_frontdoor_route" "site" {
 # Front Door counts on each of its servers, so with low limits a few extra
 # requests can get through.
 
+locals {
+  first_rate_limit_priority = length(var.load_test_allowed_ips) > 0 ? 2 : 1
+}
+
 resource "azurerm_cdn_frontdoor_firewall_policy" "main" {
   count               = var.enable_front_door ? 1 : 0
   name                = "${local.compact_prefix}waf"
@@ -121,13 +125,37 @@ resource "azurerm_cdn_frontdoor_firewall_policy" "main" {
   # 429 Too Many Requests.
   custom_block_response_status_code = 429
 
+  # Lets a load test from a known machine past the rate limits below. Absent
+  # unless load_test_allowed_ips is set, and the limits keep their usual
+  # priorities when it is absent, so the normal plan is unchanged. Rules run
+  # in priority order and an Allow ends evaluation.
+  #
+  # SocketAddr is the address Front Door itself sees. RemoteAddr would be
+  # read from X-Forwarded-For when present, and anyone can send that header
+  # with the allowed address in it.
+  dynamic "custom_rule" {
+    for_each = length(var.load_test_allowed_ips) > 0 ? [var.load_test_allowed_ips] : []
+    content {
+      name     = "LoadTestAllow"
+      type     = "MatchRule"
+      priority = 1
+      action   = "Allow"
+
+      match_condition {
+        match_variable = "SocketAddr"
+        operator       = "IPMatch"
+        match_values   = custom_rule.value
+      }
+    }
+  }
+
   # Sign-in, sign-up and password reset: the targets of password guessing and
   # mass sign-ups. The API keeps its own exact limits (10 sign-ins a minute,
   # 5 sign-ups an hour); this stops a flood before it reaches the container.
   custom_rule {
     name                           = "AuthRateLimit"
     type                           = "RateLimitRule"
-    priority                       = 1
+    priority                       = local.first_rate_limit_priority
     rate_limit_duration_in_minutes = 1
     rate_limit_threshold           = 30
     action                         = "Block"
@@ -148,7 +176,7 @@ resource "azurerm_cdn_frontdoor_firewall_policy" "main" {
   custom_rule {
     name                           = "SiteRateLimit"
     type                           = "RateLimitRule"
-    priority                       = 2
+    priority                       = local.first_rate_limit_priority + 1
     rate_limit_duration_in_minutes = 5
     rate_limit_threshold           = 1000
     action                         = "Block"

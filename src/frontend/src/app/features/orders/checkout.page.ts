@@ -1,4 +1,5 @@
 import { Component, ElementRef, effect, inject, signal, viewChild } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Lock, LucideAngularModule } from 'lucide-angular';
@@ -11,7 +12,7 @@ import { ButtonComponent, FormErrorListComponent, LoadingSpinnerComponent } from
 
 @Component({
   selector: 'app-checkout-page',
-  imports: [LucideAngularModule, ButtonComponent, FormErrorListComponent, LoadingSpinnerComponent],
+  imports: [FormsModule, LucideAngularModule, ButtonComponent, FormErrorListComponent, LoadingSpinnerComponent],
   templateUrl: './checkout.page.html',
 })
 export class CheckoutPage {

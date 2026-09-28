@@ -1,7 +1,59 @@
 # KnowledgeMarket
 
+[![CI](https://github.com/NoahStarkenburg/knowledge-market/actions/workflows/ci.yml/badge.svg)](https://github.com/NoahStarkenburg/knowledge-market/actions/workflows/ci.yml)
+
 A course marketplace where creators publish courses and learners buy and watch them.
-Built as a .NET 9 REST API with an Angular 21 single-page frontend.
+Built as a .NET 9 REST API with an Angular 21 single-page frontend, running on Azure.
+
+**Live demo:** <https://knowledgemarket-bbedacandbcbajbu.z01.azurefd.net>
+
+Create an account to browse. Payments run in Stripe test mode: card `4242 4242 4242 4242`,
+any future date, any CVC. The database is on Azure SQL's free serverless tier, which pauses
+when idle, so the first request after a quiet period can take up to a minute while it wakes.
+
+## Highlights
+
+- **Live on Azure, all infrastructure as code.** Terraform provisions Front Door with a WAF
+  (rate limits on the whole site and tighter ones on sign-in), Container Apps inside a VNet,
+  Azure SQL over a private endpoint, Blob Storage, Managed Redis, Key Vault, Communication
+  Services email and Application Insights. The API has no public address, and nginx only
+  accepts traffic that came through Front Door.
+- **No passwords in the app.** SQL, Blob Storage, Redis, email and Key Vault are all reached
+  with managed identities. Stripe keys live in Key Vault and are referenced by name, and the
+  secrets Terraform generates never enter its state file.
+- **Payments that can't charge twice.** Stripe PaymentIntents, an idempotency key per buyer
+  backed by a unique index, and signed webhooks with idempotent fulfilment.
+- **Careful auth.** JWT in an HttpOnly cookie, a CSRF double-submit token, rotating refresh
+  tokens with a single-flight refresh in the Angular interceptor, email verification, and
+  role- and resource-based authorization.
+- **Tested against the real thing.** 119 backend tests, including 77 integration tests that
+  boot the real API against a SQL Server 2022 container with Testcontainers, plus 39 frontend
+  tests. CI runs all of them on every pull request.
+- **Built for a serverless database.** A connection retry policy and a 90-second connect
+  timeout ride out Azure SQL's auto-pause, and the API refuses to start in Production with
+  missing or placeholder configuration.
+
+## How it runs in production
+
+```mermaid
+flowchart LR
+  browser([Browser]) -->|HTTPS| fd[Azure Front Door<br/>WAF and rate limits]
+  stripe([Stripe]) -->|signed webhooks| fd
+  fd --> web[nginx + Angular<br/>Container Apps, external]
+  web -->|/api over the private network| api[.NET 9 API<br/>Container Apps, internal only]
+  api --> sql[(Azure SQL<br/>private endpoint)]
+  api --> blob[(Blob Storage)]
+  api --> redis[(Managed Redis)]
+  api --> kv[Key Vault]
+  api --> email[Communication Services<br/>email]
+  api --> ai[Application Insights]
+```
+
+Everything in the diagram is defined in [`infra/`](infra) (Terraform). Each image is built
+once per commit, tagged with the commit SHA, pushed to Azure Container Registry and rolled
+out to Container Apps; Terraform deliberately ignores the running image so an apply never
+rolls a deployment back. GitHub Actions builds and tests every pull request. Automated
+deployment through QA and staging to production, with approval gates, is the next step.
 
 ## Stack
 
@@ -15,6 +67,8 @@ Built as a .NET 9 REST API with an Angular 21 single-page frontend.
 | Storage | Pluggable: local filesystem, S3-compatible, or Azure Blob Storage |
 | Frontend | Angular 21 (standalone components, signals), TypeScript, Tailwind CSS |
 | Tests | xUnit with Testcontainers (backend), Vitest through the Angular CLI (frontend) |
+| Infrastructure | Terraform on Azure: Front Door, Container Apps, Azure SQL, Blob Storage, Managed Redis, Key Vault, Communication Services, Application Insights |
+| CI | GitHub Actions: backend build and tests, frontend lint, build and tests |
 
 ## Running it locally
 
@@ -145,8 +199,8 @@ rather than running insecurely.
 ## Testing
 
 ```bash
-dotnet test                          # 100 backend tests (Docker must be running)
-cd src/frontend && npm test          # 35 frontend tests
+dotnet test                          # 119 backend tests (Docker must be running)
+cd src/frontend && npm test          # 39 frontend tests
 cd src/frontend && npm run lint
 ```
 
@@ -160,20 +214,20 @@ Api  ->  Application  ->  Domain
         Infrastructure
 ```
 
-- **Domain.\*** — entities and rules, one project per bounded context. References nothing.
-- **Application** — use cases. Declares what it needs as interfaces (ports) in
+- **Domain.\***: entities and rules, one project per bounded context. References nothing.
+- **Application**: use cases. Declares what it needs as interfaces (ports) in
   `Abstractions/`, and knows nothing about EF Core or HTTP.
-- **Infrastructure** — implements those ports: EF Core repositories, and the S3,
+- **Infrastructure**: implements those ports with EF Core repositories and the S3,
   SMTP, Stripe and Redis adapters.
-- **Api** — HTTP only, plus the composition root that wires ports to adapters.
-- **Shared.Kernel / Shared.Abstractions** — cross-cutting types (`Money`,
+- **Api**: HTTP only, plus the composition root that wires ports to adapters.
+- **Shared.Kernel / Shared.Abstractions**: cross-cutting types (`Money`,
   `PagedResult`) and platform ports (`IStorage`, `ICacheStore`) that belong to no
   single context.
 
 The inversion is what makes `Application` testable without a database, which is
 why the unit tests run in milliseconds.
 
-There are five bounded contexts — Catalog, Orders, Identity, Content, Cart —
+There are five bounded contexts (Catalog, Orders, Identity, Content, Cart),
 each with its own `DbContext` and its own SQL schema with a separate migration
 history. Six repositories still join across those schemas, so the contexts are
 not yet independently deployable; breaking those joins is what extracting any of
@@ -187,7 +241,9 @@ See [docs/architecture.md](docs/architecture.md) for detail, plus
 ## Project structure
 
 ```
+.github/workflows/ci.yml    CI: build and test on every pull request
 docs/                       Architecture and feature documentation
+infra/                      Terraform for the Azure deployment
 src/
   Api/                      HTTP: controllers, auth endpoints, composition root
   Application/              Use cases and the ports they depend on
@@ -206,6 +262,7 @@ tests/
   UnitTests/                Domain and service unit tests
   IntegrationTests/         Full HTTP tests against a real SQL Server container
 ```
+
 ## License
 
 [MIT](LICENSE)

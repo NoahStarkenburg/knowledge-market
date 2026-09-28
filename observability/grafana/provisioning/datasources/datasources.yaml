@@ -1,0 +1,53 @@
+# One datasource per signal, linked so you can go from a latency spike to the exact
+# slow request's trace, and from that trace to its log lines.
+apiVersion: 1
+datasources:
+  - name: Mimir
+    type: prometheus
+    uid: mimir
+    access: proxy
+    url: http://mimir:9009/prometheus
+    isDefault: true
+    jsonData:
+      httpMethod: POST
+      timeInterval: 15s
+      exemplarTraceIdDestinations:
+        - name: trace_id
+          datasourceUid: tempo
+          urlDisplayLabel: View trace
+
+  - name: Tempo
+    type: tempo
+    uid: tempo
+    access: proxy
+    url: http://tempo:3200
+    jsonData:
+      tracesToLogsV2:
+        datasourceUid: loki
+        spanStartTimeShift: '-5m'
+        spanEndTimeShift: '5m'
+        filterByTraceID: true
+      tracesToMetrics:
+        datasourceUid: mimir
+        spanStartTimeShift: '-5m'
+        spanEndTimeShift: '5m'
+        queries:
+          - name: Request rate
+            query: 'sum(rate(traces_span_metrics_calls{$$__tags}[5m]))'
+      serviceMap:
+        datasourceUid: mimir
+      nodeGraph:
+        enabled: true
+
+  - name: Loki
+    type: loki
+    uid: loki
+    access: proxy
+    url: http://loki:3100
+    jsonData:
+      derivedFields:
+        - name: TraceID
+          matcherType: label
+          matcherRegex: trace_id
+          url: '${__value.raw}'
+          datasourceUid: tempo

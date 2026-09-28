@@ -1,5 +1,9 @@
 # Deployment roadmap
 
+> Written before the first deployment, as the plan. The app is now live on Azure
+> (Front Door, Container Apps, Azure SQL, all in Terraform under `infra/`); see
+> the README for what is running today.
+
 What this application is deployed as, from a laptop to AKS, and why each step
 is a re-expression of the same architecture rather than a rewrite.
 
@@ -258,18 +262,18 @@ Each of these is a thing to be able to *discuss*, not a thing to build.
 double-submit token. Same origin means `SameSite=Lax`, so the browser blocks
 cross-site POSTs itself, and there is no CORS configuration to keep correct
 across four environments. Cross-origin on a different registrable domain would
-force `SameSite=None` — the third-party-cookie setting Safari already blocks.
-See [learning/05a-serving-a-spa.md](learning/05a-serving-a-spa.md).
+force `SameSite=None`, the third-party-cookie setting Safari already blocks.
 
 **Configuration is injected at run time, never baked in.** One image is built
 once and promoted through dev, QA, staging and prod. `ASPNETCORE_ENVIRONMENT`
 is deliberately unset in the Dockerfile, so an image defaults to Production and
 `ProductionConfigValidator` refuses to start on missing or placeholder values.
 
-**The SPA's config comes from `GET /api/config`, not from `VITE_*`.** Vite bakes
-`VITE_*` values into the bundle at build time, which would make one bundle per
-environment. Fetching at runtime keeps the content-hashed bundle immutable and
-cacheable for a year.
+**The SPA's config should come from `GET /api/config`, not from build-time values.**
+Values compiled into the bundle at build time mean one bundle per environment.
+Fetching them at runtime keeps the content-hashed bundle immutable and cacheable
+for a year. (Today the Stripe publishable key is still a build argument; this
+endpoint is the planned fix.)
 
 **`index.html` is never cached; `/assets/*` is cached for a year.**
 `index.html` is the manifest naming the hashed files. Cache it and a deploy
@@ -303,7 +307,7 @@ Container Apps it is internal ingress; in Kubernetes it is `NetworkPolicy`.
 Phase 5   ┌ /api/config runtime config endpoint
           ├ frontend image: Node build → nginx runtime
           ├ compose: proxy + api + mssql, ports closed
-          └ SameSite=Lax, CORS deleted, Vite dev proxy
+          └ SameSite=Lax, CORS deleted, dev-server proxy
 Phase 6b  backend code quality — .editorconfig, warnings, dotnet format in CI
 Phase 7   testing depth
 Phase 8   observability — OpenTelemetry, structured logs, dashboards

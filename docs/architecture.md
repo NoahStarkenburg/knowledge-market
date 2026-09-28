@@ -16,7 +16,7 @@ was held fixed throughout and is pinned by the integration tests.
   mapping is AutoMapper. This project references no infrastructure and no third-party SDK
   (EF, Stripe, S3 all stay outside it).
 - **`Infrastructure` (Repositories)** — EF Core for writes and most reads; Dapper for the
-  catalog search and the `catalog.catalog_stats()` Postgres function. Repositories translate
+  catalog search and the `catalog.catalog_stats()` SQL Server function. Repositories translate
   provider exceptions (concurrency, unique-violation) into application exceptions.
 
 `Api/Filters/ApiExceptionFilter` maps application exceptions to status codes:

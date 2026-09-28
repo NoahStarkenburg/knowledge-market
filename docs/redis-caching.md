@@ -1,6 +1,6 @@
 # Redis caching
 
-This service uses Redis as a distributed read cache in front of Postgres for two hot read paths.
+This service uses Redis as a distributed read cache in front of SQL Server for two hot read paths.
 The goal is to take the platform's most-repeated reads off the primary database while keeping the
 data correct. Redis is **optional**: if `Redis:ConnectionString` is empty the app wires a no-op
 cache and behaves exactly as before.
@@ -36,14 +36,14 @@ Application.Abstractions.ICacheStore     <- the port (Get / Set / Remove + GetOr
 ```
 
 - **Cache-aside** (a.k.a. lazy loading): the service checks Redis first; on a miss it loads from
-  Postgres, stores the result, and returns it. `CacheStoreExtensions.GetOrSetAsync` wraps that
+  the database, stores the result, and returns it. `CacheStoreExtensions.GetOrSetAsync` wraps that
   handshake for the course-detail read; the catalog-stats read spells it out inline.
 - **Invalidation lives at the write site.** `CourseService` evicts `course:v1:{id}` after update,
   publish, and delete; `UploadService` evicts it after a thumbnail or intro-video change (both edit
   fields that live on the cached DTO). All writers share one key builder, `Application.Catalog.CacheKeys`,
   so a producer and its invalidators can never drift.
 - **Graceful degradation.** No Redis configured -> `NullCacheStore` -> every read falls straight
-  through to Postgres. The app builds and boots identically without Redis.
+  through to the database. The app builds and boots identically without Redis.
 - **Resilience.** `RedisCacheStore` wraps every call: a Redis outage becomes a cache *miss* on reads
   and a no-op on writes, never a failed request. A cache is an optimization; losing it should make
   the app slower, not broken.
@@ -54,7 +54,7 @@ Application.Abstractions.ICacheStore     <- the port (Get / Set / Remove + GetOr
   in-memory `ConcurrentDictionary<string, Lazy<Task<T>>>`), so with N API instances you get at most
   N rebuilds, not N x requests. The leader re-checks the cache after entering the flight
   (double-checked locking) so a late arrival returns without a DB hit. Verified live: 50 concurrent
-  requests at a cold key produced exactly **one** `HMSET` (one Postgres query).
+  requests at a cold key produced exactly **one** `HMSET` (one database query).
 
 ## Seeing it work
 
@@ -64,7 +64,7 @@ docker compose --profile full up -d --build        # the API uses the km-redis c
 # Cache-aside: first request is a miss (read + write + TTL), second is a pure hit (read only)
 docker exec km-redis redis-cli MONITOR
 #   request 1 (cold): HMGET ... ; HMSET ... ; EXPIRE km:course:v1:<id> 300
-#   request 2 (warm): HMGET ...            <- no write, Postgres not touched
+#   request 2 (warm): HMGET ...            <- no write, database not touched
 
 docker exec km-redis redis-cli TTL   km:course:v1:<id>     # -> 300
 docker exec km-redis redis-cli HGET  km:course:v1:<id> data # -> the cached CourseView JSON
@@ -76,7 +76,7 @@ docker exec km-redis redis-cli EXISTS km:course:v1:<id>    # -> 0, next read rep
 # Stampede protection: 50 concurrent requests at a cold stats key -> ONE rebuild
 docker exec km-redis redis-cli DEL km:catalog:stats:v1
 seq 50 | xargs -P 50 -I{} curl -s -o /dev/null http://localhost:8080/api/catalog/stats
-#   MONITOR shows a single HMSET km:catalog:stats:v1 (one Postgres aggregate), ~51 HMGET
+#   MONITOR shows a single HMSET km:catalog:stats:v1 (one database aggregate), ~51 HMGET
 ```
 
 > The .NET distributed-cache provider stores each entry as a Redis **hash** (`data` + `absexp` +
@@ -113,10 +113,10 @@ process.
 - **Invalidation can silently fail.** If Redis is down during a write, `RemoveAsync` swallows the
   error so the write still succeeds — but the stale entry survives until its TTL. That is the reason
   an invalidation-backed key still carries a TTL at all.
-- **Is a PK lookup even worth caching?** Course detail is an indexed single-row read that Postgres
+- **Is a PK lookup even worth caching?** Course detail is an indexed single-row read that SQL Server
   serves in well under a millisecond, so the per-request latency win is small. The real payoff is
   **load shedding**: the most-viewed pages stop consuming a DB connection and CPU on every hit,
-  leaving Postgres headroom for writes and heavier queries. That benefit scales with traffic.
+  leaving the database headroom for writes and heavier queries. That benefit scales with traffic.
 - **Negative caching, on purpose omitted.** A `null` (course not found) is never stored, so a missing
   id keeps hitting the DB. Caching misses would blunt a scraping/enumeration load but risks masking a
   just-created row; not worth it here.

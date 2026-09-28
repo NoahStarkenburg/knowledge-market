@@ -199,7 +199,7 @@ server {
     }
 
     # ----- everything else -------------------------------------------------
-    # The SPA fallback. React Router invents URLs like /courses/abc-123 that
+    # The SPA fallback. The Angular router invents URLs like /courses/abc-123 that
     # match no file on disk, so a hard refresh would 404. try_files says: try
     # it as a file, then as a directory, then give up and serve index.html —
     # which boots the app, which reads the URL and renders the right page.

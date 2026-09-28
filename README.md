@@ -11,6 +11,13 @@ Create an account to browse. Payments run in Stripe test mode: card `4242 4242 4
 any future date, any CVC. The database is on Azure SQL's free serverless tier, which pauses
 when idle, so the first request after a quiet period can take up to a minute while it wakes.
 
+## About this project
+
+KnowledgeMarket is my long-running portfolio project, in active development since August 2025.
+It's where I build whatever I'm learning next, so it keeps growing: it started as a React and
+PostgreSQL app, moved to Angular and SQL Server, and now runs on Azure with its infrastructure in
+Terraform. Load testing, observability and a full deployment pipeline are what I'm adding now.
+
 ## Highlights
 
 - **Live on Azure, all infrastructure as code.** Terraform provisions Front Door with a WAF

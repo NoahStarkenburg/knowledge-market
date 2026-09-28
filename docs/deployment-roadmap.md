@@ -262,8 +262,7 @@ Each of these is a thing to be able to *discuss*, not a thing to build.
 double-submit token. Same origin means `SameSite=Lax`, so the browser blocks
 cross-site POSTs itself, and there is no CORS configuration to keep correct
 across four environments. Cross-origin on a different registrable domain would
-force `SameSite=None` — the third-party-cookie setting Safari already blocks.
-See [learning/05a-serving-a-spa.md](learning/05a-serving-a-spa.md).
+force `SameSite=None`, the third-party-cookie setting Safari already blocks.
 
 **Configuration is injected at run time, never baked in.** One image is built
 once and promoted through dev, QA, staging and prod. `ASPNETCORE_ENVIRONMENT`

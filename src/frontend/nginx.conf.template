@@ -1,9 +1,9 @@
-# nginx site config for the SPA — a TEMPLATE, not a finished config.
+# nginx site config for the SPA - a TEMPLATE, not a finished config.
 #
 # At container start, the nginx image renders this file into
 # /etc/nginx/conf.d/default.conf, replacing each ${NAME} with that environment
 # variable. Only variables that are actually set get replaced, which is why
-# nginx's own $uri, $host and friends pass through untouched — and why the
+# nginx's own $uri, $host and friends pass through untouched - and why the
 # Dockerfile gives every ${NAME} below a default.
 #
 # One image, configured per environment by environment variables:
@@ -12,7 +12,7 @@
 #   ------------------------  --------------------  ---------------------------
 #   API_UPSTREAM              api:8080              knowledgemarket-api:80
 #   API_HOST                  api                   knowledgemarket-api
-#   FRONT_DOOR_ID             (empty — no check)    the Front Door profile's ID
+#   FRONT_DOOR_ID             (empty - no check)    the Front Door profile's ID
 #   NGINX_LOCAL_RESOLVERS     set automatically from /etc/resolv.conf at start
 #
 # Three jobs:
@@ -151,7 +151,7 @@ server {
         # The real client, resolved above. Custom header names rather than
         # X-Forwarded-*, because Container Apps' ingress proxy sits between nginx
         # and the API and rewrites the standard ones on the way through. The API
-        # reads these via ForwardedHeadersOptions — see Program.cs.
+        # reads these via ForwardedHeadersOptions - see Program.cs.
         proxy_set_header X-Client-IP    $client_ip;
         proxy_set_header X-Client-Proto $client_proto;
         proxy_set_header X-Client-Host  $client_host;
@@ -162,7 +162,7 @@ server {
 
     # ----- hashed assets ---------------------------------------------------
     # The Angular build names these from a hash of their contents, so
-    # main-TG2OUNMI.js can never return different bytes — change the file and
+    # main-TG2OUNMI.js can never return different bytes - change the file and
     # the NAME changes. That makes a one-year cache safe: there is no such thing
     # as a stale response, only a filename that no longer exists.
     #
@@ -187,7 +187,7 @@ server {
 
     # ----- the app shell ---------------------------------------------------
     # index.html names which hashed files to load. Cache it and a deploy leaves
-    # browsers asking for an asset that no longer exists — a blank page until
+    # browsers asking for an asset that no longer exists - a blank page until
     # the cache expires. no-cache does not mean "do not store"; it means "ask
     # before reusing", which is a cheap 304 and always correct.
     location = /index.html {
@@ -201,7 +201,7 @@ server {
     # ----- everything else -------------------------------------------------
     # The SPA fallback. The Angular router invents URLs like /courses/abc-123 that
     # match no file on disk, so a hard refresh would 404. try_files says: try
-    # it as a file, then as a directory, then give up and serve index.html —
+    # it as a file, then as a directory, then give up and serve index.html - 
     # which boots the app, which reads the URL and renders the right page.
     #
     # This is the exact rule ASP.NET spells MapFallbackToFile("index.html").

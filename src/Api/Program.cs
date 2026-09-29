@@ -214,7 +214,7 @@ builder.Services.AddSingleton<AppMetrics>();
 
 // ---------------- Services ----------------
 
-// EF Core (SQL Server) — one database, a schema per bounded context, and a
+// EF Core (SQL Server) - one database, a schema per bounded context, and a
 // separate __EFMigrationsHistory table inside each so contexts migrate independently.
 builder.Services.AddDbContext<UsersDbContext>(opt =>
 {
@@ -426,7 +426,7 @@ else
 
 // Health Checks. "ready" means the dependency must be up for the app to serve traffic;
 // everything else is reported for humans but never gates the readiness probe. Redis is
-// deliberately NOT tagged ready — the cache degrades to a miss, so an outage should show
+// deliberately NOT tagged ready - the cache degrades to a miss, so an outage should show
 // up as degraded, not pull the instance out of rotation.
 var healthChecks = builder.Services.AddHealthChecks()
     .AddSqlServer(builder.Configuration.GetConnectionString("Default")!, name: "sqlserver", tags: ["db", "ready"]);
@@ -850,7 +850,7 @@ app.MapGet("/api/debug/me", (HttpContext ctx) =>
     });
 }).RequireAuthorization();
 
-// Liveness: is the process up? No dependencies — a failing database must not cause the
+// Liveness: is the process up? No dependencies - a failing database must not cause the
 // orchestrator to kill and restart an otherwise healthy container.
 app.MapHealthChecks("/health", new HealthCheckOptions { Predicate = _ => false }).AllowAnonymous();
 

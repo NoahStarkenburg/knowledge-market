@@ -27,7 +27,7 @@ public sealed class WebhooksController(
         if (string.IsNullOrEmpty(webhookSecret))
             return Problem("Stripe webhook secret not configured.", statusCode: 500);
 
-        // Read raw body — Stripe signature verification requires the exact bytes.
+        // Read raw body - Stripe signature verification requires the exact bytes.
         string json;
         using (var reader = new StreamReader(Request.Body))
             json = await reader.ReadToEndAsync(ct);
@@ -61,7 +61,7 @@ public sealed class WebhooksController(
                 break;
 
             case EventTypes.PaymentIntentPaymentFailed:
-                // Log only for now — order stays Pending so user can retry.
+                // Log only for now - order stays Pending so user can retry.
                 break;
 
             case EventTypes.CustomerSubscriptionUpdated:

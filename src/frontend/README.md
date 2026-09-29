@@ -28,13 +28,13 @@ the app and the API share one origin, exactly as they do behind nginx and Front 
 
 ## Layout
 
-- `src/app/core/api` — `types.ts` (the API contracts), `api.service.ts` (every backend call;
+- `src/app/core/api` - `types.ts` (the API contracts), `api.service.ts` (every backend call;
   components never touch `HttpClient`), `api.interceptor.ts` (cookies, the `X-CSRF` header,
   and one shared refresh-and-retry when a session expires)
-- `src/app/core` — auth state, route guards, session expiry, Stripe and Google Drive helpers
-- `src/app/shared/ui` — primitives: button, card, field, alert and so on
-- `src/app/layout` — navbar, footer, app shell
-- `src/app/features` — one folder per feature: auth, courses, orders, settings, admin, legal
+- `src/app/core` - auth state, route guards, session expiry, Stripe and Google Drive helpers
+- `src/app/shared/ui` - primitives: button, card, field, alert and so on
+- `src/app/layout` - navbar, footer, app shell
+- `src/app/features` - one folder per feature: auth, courses, orders, settings, admin, legal
 
 Auth is an HttpOnly JWT cookie plus a CSRF double-submit token. The app keeps display state
 only, never tokens. Route guards are for the user experience; the API enforces access.

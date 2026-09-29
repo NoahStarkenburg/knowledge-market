@@ -10,15 +10,15 @@ namespace Infrastructure.Caching;
 // Redis-backed ICacheStore. Values are stored as UTF-8 JSON with an absolute TTL. Every operation
 // is wrapped so a Redis outage degrades to a cache miss (reads) or a no-op (writes/invalidation)
 // instead of failing the request. The trade-off: if a RemoveAsync silently fails during an outage,
-// a stale entry survives until its TTL expires — which is why every cached read still carries one.
+// a stale entry survives until its TTL expires - which is why every cached read still carries one.
 //
 // Reads are counted (hit/miss/error) and traced, because a cache that silently stops hitting looks
-// exactly like a cache that is working — only slower.
+// exactly like a cache that is working - only slower.
 public sealed class RedisCacheStore(IDistributedCache cache, AppMetrics metrics, ILogger<RedisCacheStore> log) : ICacheStore
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
-    // Keys look like "course:v1:{id}" — the leading segment groups them so one hot key
+    // Keys look like "course:v1:{id}" - the leading segment groups them so one hot key
     // can't mask a cold one in the hit-rate panel.
     private static string RegionOf(string key)
     {

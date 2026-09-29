@@ -7,7 +7,7 @@ module.exports = {
         display: ['"Archivo"', '"Arial Narrow"', "system-ui", "sans-serif"],
         sans: ['"Hanken Grotesk"', "system-ui", "sans-serif"],
         // "mono" is repurposed as the label face: the same clean grotesk, set in
-        // caps with wide tracking. (No monospace — it read as templated.)
+        // caps with wide tracking. (No monospace - it read as templated.)
         mono: ['"Hanken Grotesk"', "system-ui", "sans-serif"],
       },
       colors: {

@@ -51,7 +51,7 @@ container*. The application does not change.
 
 Who fills each box:
 
-| Box | Stage 0 — local | Stage 1 — cloud | Stage 2 — edge | Stage 3 — AKS |
+| Box | Stage 0 - local | Stage 1 - cloud | Stage 2 - edge | Stage 3 - AKS |
 |---|---|---|---|---|
 | **Edge** | nginx container | Container Apps ingress + nginx | Front Door / SWA | Ingress Controller |
 | **API** | container | Container App | Container App | Deployment + Service |
@@ -62,7 +62,7 @@ Note the last row. **SQL is never run by us after Stage 0.** More on that below.
 
 ---
 
-## Stage 0 — local, production-shaped (where we are)
+## Stage 0 - local, production-shaped (where we are)
 
 ```
 docker compose up
@@ -86,7 +86,7 @@ surface.
 
 That is least-exposure, and it is an honest model of production, where the API
 sits in a private subnet behind an edge. It also *proves* the single-origin
-claim — if a browser can only reach port 8080, then `/api/courses` and
+claim - if a browser can only reach port 8080, then `/api/courses` and
 `/index.html` are unarguably the same origin.
 
 **What gets built here:**
@@ -100,11 +100,11 @@ Cost: **$0**.
 
 ---
 
-## Stage 1 — first cloud deploy
+## Stage 1 - first cloud deploy
 
 Goal: **a live URL someone can click.** One day of work, minimal spend.
 
-### Option 1a — Azure Container Apps (recommended)
+### Option 1a - Azure Container Apps (recommended)
 
 Container Apps supports **internal ingress**, which maps the compose shape
 almost exactly:
@@ -116,14 +116,14 @@ sql     Azure SQL (serverless)            → outside the container environment
 ```
 
 nginx `proxy_pass`es to the API over the environment's internal DNS, exactly as
-it does over the compose network. **The nginx config barely changes** — the
+it does over the compose network. **The nginx config barely changes** - the
 upstream hostname does, and nothing else.
 
 - Consumption pricing, **scales to zero** when idle
 - Free TLS and a free `*.azurecontainerapps.io` hostname
 - The built-in ingress handles TLS termination and load balancing
 
-### Option 1b — one VM running the compose file
+### Option 1b - one VM running the compose file
 
 Copy `docker-compose.yml` to a small VM, `docker compose up -d`, point DNS at
 it, add Caddy or certbot for TLS.
@@ -132,13 +132,13 @@ Unglamorous, and **a great many real production apps run exactly this way.**
 Cheapest possible path, and the deploy is literally the thing you already
 tested locally.
 
-### Option 1c — Static Web Apps + Container Apps
+### Option 1c - Static Web Apps + Container Apps
 
 SPA on SWA (free tier, global CDN included), API on Container Apps, with SWA's
 **linked backend** proxying `/api/*` so the origin stays single.
 
 The trap to know: on default hostnames (`*.azurestaticapps.net` vs
-`*.azurecontainerapps.io`) you are on different registrable domains — so
+`*.azurecontainerapps.io`) you are on different registrable domains - so
 cross-*site*, which forces `SameSite=None` and hands back the third-party-cookie
 fragility this architecture exists to avoid. Custom subdomains of one domain, or
 a linked backend, fixes it. Linked backends require the Standard tier.
@@ -151,7 +151,7 @@ simpler on the day.
 
 ---
 
-## Stage 2 — a managed edge
+## Stage 2 - a managed edge
 
 Replace nginx-as-edge with a real one.
 
@@ -165,7 +165,7 @@ knowledgemarket.com  →  Azure Front Door
 **What this buys:** ~190 global PoPs, WAF, edge rate limiting, DDoS absorption,
 and static served from near the user instead of from your container.
 
-**What it costs:** roughly $35/month base plus traffic — which is why this is
+**What it costs:** roughly $35/month base plus traffic - which is why this is
 worth doing as a *measured exercise* rather than leaving it running. Stand it
 up, capture before/after first-paint latency and cache-hit ratio, document it,
 tear it down. The measurements are the portfolio artifact; the standing bill is
@@ -180,7 +180,7 @@ cached authenticated response is one user seeing another user's data.
 
 ---
 
-## Stage 3 — AKS
+## Stage 3 - AKS
 
 This is the learning target, so here is the mapping in full. **Almost
 everything built in Stage 0 carries over as a different file format.**
@@ -190,12 +190,12 @@ everything built in Stage 0 carries over as a different file format.**
 | Compose | Kubernetes | Note |
 |---|---|---|
 | a `service` | `Deployment` + `Service` | Deployment manages pods; Service gives a stable name |
-| the nginx `proxy` container | `Ingress` + an Ingress Controller | **you delete your proxy container** — the controller is the cluster's nginx |
+| the nginx `proxy` container | `Ingress` + an Ingress Controller | **you delete your proxy container** - the controller is the cluster's nginx |
 | `ports: "8080:8080"` | `Service` + `Ingress` | Ingress is the only public entry |
 | `environment:` non-secret | `ConfigMap` | |
 | `environment:` secret | `Secret`, ideally Key Vault via the CSI driver | never a literal in a manifest |
 | `depends_on: service_healthy` | `readinessProbe` (+ `initContainers`) | k8s has no ordering primitive; readiness *is* the mechanism |
-| `HEALTHCHECK` in the Dockerfile | `livenessProbe` / `readinessProbe` | **delete the Dockerfile instruction** — the scheduler owns this |
+| `HEALTHCHECK` in the Dockerfile | `livenessProbe` / `readinessProbe` | **delete the Dockerfile instruction** - the scheduler owns this |
 | named volume | `PersistentVolumeClaim` | we avoid needing one |
 | compose network | cluster networking + `NetworkPolicy` | NetworkPolicy is how you re-create "no published ports" |
 | `docker compose up` | `kubectl apply` / `helm upgrade` | |
@@ -217,7 +217,7 @@ properly now.
 | `cert-manager` | automatic Let's Encrypt certificates |
 | Key Vault CSI driver | secrets mounted from Key Vault, never in git or a manifest |
 | Helm or Kustomize | one templated manifest set, four environments |
-| Argo CD or Flux | GitOps — the cluster reconciles itself to what is in git |
+| Argo CD or Flux | GitOps - the cluster reconciles itself to what is in git |
 | Prometheus + Grafana | the observability work from Phase 8, cluster-wide |
 
 ### Cost and how to approach it
@@ -232,7 +232,7 @@ A cluster idling at $30/month is not.
 
 > "It runs as containers behind a single origin. Locally that's Compose with
 > nginx as the edge; in Azure it's Container Apps with the platform ingress. I
-> wrote the Helm chart and ran it on AKS to understand the mapping — Ingress
+> wrote the Helm chart and ran it on AKS to understand the mapping - Ingress
 > replaces my nginx container, probes replace the Dockerfile `HEALTHCHECK`,
 > ConfigMap and Secret replace the compose environment block, and the image is
 > byte-identical. I don't run the cluster continuously because a single-service
@@ -293,11 +293,11 @@ Container Apps it is internal ingress; in Kubernetes it is `NetworkPolicy`.
 
 | Stage | Monthly | Notes |
 |---|---|---|
-| 0 — local | **$0** | |
-| 1a — Container Apps + Azure SQL | ~$5-20 | scales to zero when idle |
-| 1b — one VM | ~$5-15 | |
-| 2 — + Front Door | +$35 base | run as a measured exercise, then remove |
-| 3 — AKS | +$30/node | same: build, measure, document, tear down |
+| 0 - local | **$0** | |
+| 1a - Container Apps + Azure SQL | ~$5-20 | scales to zero when idle |
+| 1b - one VM | ~$5-15 | |
+| 2 - + Front Door | +$35 base | run as a measured exercise, then remove |
+| 3 - AKS | +$30/node | same: build, measure, document, tear down |
 
 ---
 
@@ -308,9 +308,9 @@ Phase 5   ┌ /api/config runtime config endpoint
           ├ frontend image: Node build → nginx runtime
           ├ compose: proxy + api + mssql, ports closed
           └ SameSite=Lax, CORS deleted, dev-server proxy
-Phase 6b  backend code quality — .editorconfig, warnings, dotnet format in CI
+Phase 6b  backend code quality - .editorconfig, warnings, dotnet format in CI
 Phase 7   testing depth
-Phase 8   observability — OpenTelemetry, structured logs, dashboards
+Phase 8   observability - OpenTelemetry, structured logs, dashboards
 Phase 9   Stage 1 deploy: a live URL
 Phase 9b  Stage 2 edge, measured and documented
 Phase 10  Stage 3 AKS: Helm chart, migration write-up

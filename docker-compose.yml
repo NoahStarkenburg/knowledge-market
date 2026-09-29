@@ -1,6 +1,6 @@
 # Two ways to use this file.
 #
-# 1. Day-to-day development — dependencies only (the default)
+# 1. Day-to-day development - dependencies only (the default)
 #
 #        docker compose up -d
 #
@@ -9,9 +9,9 @@
 #    `dotnet run` and `npm start`, so you keep the debugger, hot reload and a
 #    fast rebuild loop. The `web` and `api` services below belong to the "full"
 #    profile, and services with a profile only start when that profile is asked
-#    for — so this command is exactly what it always was.
+#    for - so this command is exactly what it always was.
 #
-# 2. The whole stack in containers — a rehearsal of production
+# 2. The whole stack in containers - a rehearsal of production
 #
 #        docker compose --profile full up -d --build
 #        open http://localhost:8080
@@ -29,7 +29,7 @@
 #
 # Values in this file are local-only on purpose. Nothing here protects anything
 # outside your machine. Real secrets live in user-secrets locally and in Key
-# Vault in Azure — see README.
+# Vault in Azure - see README.
 
 services:
   mssql:
@@ -41,7 +41,7 @@ services:
       ACCEPT_EULA: "Y"
       # This password is NOT a secret, and committing it is deliberate.
       # It protects a container bound to your own machine, created from this
-      # very file — anyone who can read this file can already start their own.
+      # very file - anyone who can read this file can already start their own.
       # Contrast with Jwt:SigningKey or a Stripe secret key, which authorize
       # real actions and therefore live in user-secrets. "Is it a secret?"
       # depends on what it protects and who can reach it, not on the word
@@ -224,7 +224,7 @@ services:
     # Deliberately no depends_on the API. nginx serves the SPA from its own
     # disk and does not need the API to do that, and it resolves the API's
     # address per request. If the API is down the site still loads, and only
-    # /api/* calls fail — which is how it should degrade.
+    # /api/* calls fail - which is how it should degrade.
 
 # Two networks rather than compose's default single flat one, on which every
 # container could reach every other. Each service joins only what it needs:

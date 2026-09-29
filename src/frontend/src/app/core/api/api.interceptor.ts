@@ -4,7 +4,7 @@ import { catchError, from, switchMap, throwError } from 'rxjs';
 import { SessionEvents } from '@core/session-events';
 import { doRefresh, readCsrf } from './http-core';
 
-// Auth endpoints where a 401 is a real failure (bad credentials), not an expired token —
+// Auth endpoints where a 401 is a real failure (bad credentials), not an expired token - 
 // so we must NOT try to refresh-and-retry them (that would loop or mask the real error).
 const AUTH_NO_REFRESH = /\/api\/auth\/(login|register|refresh|logout|forgot-password|reset-password|google)/;
 

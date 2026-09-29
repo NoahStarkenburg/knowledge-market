@@ -7,15 +7,15 @@ was held fixed throughout and is pinned by the integration tests.
 
 ## Layers
 
-- **`Api` (Controllers)** — HTTP concerns only: model binding, resource-based authorization
+- **`Api` (Controllers)** - HTTP concerns only: model binding, resource-based authorization
   (`IAuthorizationService` + policy shells), cookie/CSRF/rate-limit metadata, file streaming
   and multipart handling. Controllers hold no business rules and never touch a `DbContext`.
-- **`Application` (Services + ports)** — transaction-script services that hold the rules,
+- **`Application` (Services + ports)** - transaction-script services that hold the rules,
   plus the abstractions (`Application.Abstractions`) the outer layers implement: repositories,
   `IStorage`, `IContentStorage`, `IPaymentService`. Validation is FluentValidation; entity→DTO
   mapping is AutoMapper. This project references no infrastructure and no third-party SDK
   (EF, Stripe, S3 all stay outside it).
-- **`Infrastructure` (Repositories)** — EF Core for writes and most reads; Dapper for the
+- **`Infrastructure` (Repositories)** - EF Core for writes and most reads; Dapper for the
   catalog search and the `catalog.catalog_stats()` SQL Server function. Repositories translate
   provider exceptions (concurrency, unique-violation) into application exceptions.
 
@@ -38,9 +38,9 @@ was held fixed throughout and is pinned by the integration tests.
 ## Deliberately still minimal APIs
 
 - **Auth** (`/api/auth/*`: login, register, refresh, logout, verify-email, password reset,
-  Google OAuth) — a self-contained, security-critical module. Google OAuth is config-gated
+  Google OAuth) - a self-contained, security-critical module. Google OAuth is config-gated
   and tied to the auth scheme, which a controller can't conditionally register.
-- **Dev seed** (`/api/dev/*`) — registered only in Development; not production surface.
+- **Dev seed** (`/api/dev/*`) - registered only in Development; not production surface.
 
 ## Cross-context reads
 

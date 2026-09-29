@@ -1,7 +1,7 @@
 namespace Api.Observability;
 
 // Logs get shipped to Loki, retained, and read by whoever has Grafana. Email addresses are
-// personal data and, on failed logins, are attacker-supplied — so they are masked before they
+// personal data and, on failed logins, are attacker-supplied - so they are masked before they
 // leave the process. Enough of the address survives to correlate a support ticket; not enough
 // to hand someone a mailing list or a credential-stuffing wordlist.
 public static class LogSanitizer

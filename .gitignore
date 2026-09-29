@@ -1,4 +1,4 @@
-# .gitignore — everything git should never track.
+# .gitignore - everything git should never track.
 #
 # Rules are matched top to bottom. A trailing slash means "directory".
 # A leading ! un-ignores something an earlier rule caught.
@@ -27,7 +27,7 @@ dist/
 
 
 # ---------------------------------------------------------------------------
-# Secrets — the section that matters most
+# Secrets - the section that matters most
 # ---------------------------------------------------------------------------
 # Real environment files. These hold actual values and must never be committed.
 .env

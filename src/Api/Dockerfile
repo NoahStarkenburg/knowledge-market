@@ -105,7 +105,7 @@ USER appuser
 # container is not reachable from outside it.
 ENV ASPNETCORE_URLS=http://+:8080
 
-# Documentation only. It does not publish anything — that is `docker run -p`.
+# Documentation only. It does not publish anything - that is `docker run -p`.
 # Its real use is telling a reader, and `docker run -P`, which port matters.
 EXPOSE 8080
 
@@ -120,7 +120,7 @@ EXPOSE 8080
 # Docker restarts nothing on its own; this only marks the container unhealthy,
 # which is what a compose `depends_on: condition: service_healthy` and most
 # schedulers watch. /health is the liveness endpoint and runs no dependency
-# checks — /health/ready is the one that queries SQL Server, and using it here
+# checks - /health/ready is the one that queries SQL Server, and using it here
 # would report the app unhealthy during a database blip it will recover from.
 # Under Kubernetes you drop this line entirely and declare probes in the
 # manifest, where the scheduler can act on them.

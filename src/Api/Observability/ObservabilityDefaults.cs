@@ -9,7 +9,7 @@ public static class ObservabilityDefaults
 
     // Liveness/readiness probes run on a timer forever. They are real HTTP requests, but
     // recording them means a trace every 30 seconds per replica and a request-log line to
-    // match — noise that crowds out the traffic you actually want to see.
+    // match - noise that crowds out the traffic you actually want to see.
     public static bool IsProbePath(PathString path) =>
         path.StartsWithSegments("/health", StringComparison.OrdinalIgnoreCase);
 }

@@ -7,7 +7,7 @@
 # Terraform records everything it manages in a STATE FILE, and for anything
 # beyond a solo experiment that file lives in shared remote storage, so that
 # your laptop and GitHub Actions work from the same record. That storage has to
-# exist before Terraform can use it — Terraform cannot store its state in a
+# exist before Terraform can use it - Terraform cannot store its state in a
 # place it has not created yet. This is the chicken-and-egg step every Terraform
 # project has. It is done once, with the plain Azure CLI, and never touched again.
 #
@@ -44,7 +44,7 @@ Invoke-Az group create --name $ResourceGroup --location $Location `
 
 Write-Host "==> Storage account $StorageAccount"
 # Every flag here closes a door, and each matters because the state file holds
-# secrets in PLAINTEXT — anything Terraform creates with a password or key ends
+# secrets in PLAINTEXT - anything Terraform creates with a password or key ends
 # up recorded in it.
 #   --allow-blob-public-access false   nothing in it can ever be made public
 #   --allow-shared-key-access false    no account keys: every read and write must
@@ -85,7 +85,7 @@ $scope = Invoke-Az storage account show --name $StorageAccount --resource-group 
 # "--output was unexpected at this time".
 #
 # The Where-Object filter matters: with no results the call returns $null, and
-# @($null).Count is 1 in PowerShell, not 0 — the script would wrongly conclude
+# @($null).Count is 1 in PowerShell, not 0 - the script would wrongly conclude
 # the role already exists and skip creating it.
 $existing = @(Invoke-Az role assignment list --assignee $me --scope $scope `
     --role "Storage Blob Data Contributor" --query "[].id" --output tsv |
@@ -115,7 +115,7 @@ for ($attempt = 1; $attempt -le 20 -and -not $created; $attempt++) {
 if (-not $created) { throw "Could not create the container. Wait a few minutes and re-run." }
 
 Write-Host "==> Delete lock"
-# Stops anyone — including you on a bad day — deleting the state resource group
+# Stops anyone - including you on a bad day - deleting the state resource group
 # by accident. To remove it deliberately:
 #     az lock delete --name do-not-delete-terraform-state --resource-group $ResourceGroup
 Invoke-Az lock create --name do-not-delete-terraform-state --lock-type CanNotDelete `

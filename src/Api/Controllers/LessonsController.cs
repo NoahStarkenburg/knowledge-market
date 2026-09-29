@@ -144,7 +144,7 @@ public sealed class LessonsController(
 
         if (!await AuthorizeLesson(shell, PolicyNames.LessonView)) return Forbid();
 
-        // Try presigned redirect (S3/MinIO) — skips proxying through the API.
+        // Try presigned redirect (S3/MinIO) - skips proxying through the API.
         try
         {
             var signedUrl = await storage.TryGetSignedReadUrl(fileId, new SignedReadOptions

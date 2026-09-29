@@ -7,7 +7,7 @@
 # Speed is the least important reason. The other two matter more.
 
 # ---------------------------------------------------------------------------
-# node_modules — excluded for CORRECTNESS, not size
+# node_modules - excluded for CORRECTNESS, not size
 # ---------------------------------------------------------------------------
 # It holds compiled binaries for the platform it was installed on, such as
 # @esbuild/win32-x64. The image is Linux. Copying Windows binaries in makes the
@@ -20,7 +20,7 @@
 node_modules/
 
 # ---------------------------------------------------------------------------
-# Build output and caches — rebuilt inside the image
+# Build output and caches - rebuilt inside the image
 # ---------------------------------------------------------------------------
 # Your local dist/ is whatever you last built by hand. The image builds its own.
 # Excluding it makes that impossible to get wrong. .angular/ is the CLI's local
@@ -30,7 +30,7 @@ dist/
 coverage/
 
 # ---------------------------------------------------------------------------
-# Secrets — a file copied into a layer stays in that layer forever
+# Secrets - a file copied into a layer stays in that layer forever
 # ---------------------------------------------------------------------------
 # Deleting it in a later instruction only hides it; `docker history` still has
 # it. Keep it out of the context in the first place.

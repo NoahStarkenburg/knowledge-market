@@ -5,7 +5,7 @@ namespace Shared.Kernel;
 // Business metrics, on top of the automatic HTTP/runtime ones. They live on the
 // "KnowledgeMarket" meter, which the API registers with OpenTelemetry so they export
 // to Mimir alongside everything else. Kept in Application because the services that
-// record them live here — the API only owns the wiring.
+// record them live here - the API only owns the wiring.
 public sealed class AppMetrics
 {
     public const string MeterName = "KnowledgeMarket";

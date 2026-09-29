@@ -1,0 +1,65 @@
+# Service level objectives, precomputed by Mimir's ruler every 15 seconds.
+#
+# Availability SLO: 99.5% of API requests succeed over 30 days.
+#   SLI          = requests that did not return 5xx / all requests (health probes excluded)
+#   error budget = 1 - 0.995 = 0.005, so 0.5% of requests may fail
+#   burn rate    = error ratio / 0.005. At 1 the budget lasts exactly 30 days; at 14.4 it
+#                  is gone in about 2 days.
+#
+# Error ratios are recorded over four windows because the alerts pair a long window (is this
+# significant?) with a short one (is it still happening?), as in the Google SRE Workbook's
+# multi-window, multi-burn-rate alerts.
+#
+# Measured at the API, so it cannot see a request the API never answered (nginx returning
+# 502 because the API is down). k6's own error rate, measured at the client, covers those.
+groups:
+  - name: km-slo-availability
+    interval: 15s
+    rules:
+      - record: km:slo_requests:rate5m
+        expr: sum(rate(http_server_request_duration_count{job="KnowledgeMarket.Api", http_route!~"/health.*"}[5m]))
+      - record: km:slo_errors:rate5m
+        expr: sum(rate(http_server_request_duration_count{job="KnowledgeMarket.Api", http_route!~"/health.*", http_response_status_code=~"5.."}[5m])) or vector(0)
+      - record: km:slo_requests:rate30m
+        expr: sum(rate(http_server_request_duration_count{job="KnowledgeMarket.Api", http_route!~"/health.*"}[30m]))
+      - record: km:slo_errors:rate30m
+        expr: sum(rate(http_server_request_duration_count{job="KnowledgeMarket.Api", http_route!~"/health.*", http_response_status_code=~"5.."}[30m])) or vector(0)
+      - record: km:slo_requests:rate1h
+        expr: sum(rate(http_server_request_duration_count{job="KnowledgeMarket.Api", http_route!~"/health.*"}[1h]))
+      - record: km:slo_errors:rate1h
+        expr: sum(rate(http_server_request_duration_count{job="KnowledgeMarket.Api", http_route!~"/health.*", http_response_status_code=~"5.."}[1h])) or vector(0)
+      - record: km:slo_requests:rate6h
+        expr: sum(rate(http_server_request_duration_count{job="KnowledgeMarket.Api", http_route!~"/health.*"}[6h]))
+      - record: km:slo_errors:rate6h
+        expr: sum(rate(http_server_request_duration_count{job="KnowledgeMarket.Api", http_route!~"/health.*", http_response_status_code=~"5.."}[6h])) or vector(0)
+
+      - record: km:slo_error_ratio:rate5m
+        expr: km:slo_errors:rate5m / (km:slo_requests:rate5m > 0)
+      - record: km:slo_error_ratio:rate30m
+        expr: km:slo_errors:rate30m / (km:slo_requests:rate30m > 0)
+      - record: km:slo_error_ratio:rate1h
+        expr: km:slo_errors:rate1h / (km:slo_requests:rate1h > 0)
+      - record: km:slo_error_ratio:rate6h
+        expr: km:slo_errors:rate6h / (km:slo_requests:rate6h > 0)
+
+      - record: km:slo_burn_rate:5m
+        expr: km:slo_error_ratio:rate5m / 0.005
+      - record: km:slo_burn_rate:30m
+        expr: km:slo_error_ratio:rate30m / 0.005
+      - record: km:slo_burn_rate:1h
+        expr: km:slo_error_ratio:rate1h / 0.005
+      - record: km:slo_burn_rate:6h
+        expr: km:slo_error_ratio:rate6h / 0.005
+
+  # Latency SLO: 95% of API requests finish within 300 ms and 99% within 1 s. Recorded as
+  # percentiles for graphs and alerts. histogram_quantile interpolates inside a bucket, so
+  # these are estimates; k6 measures the exact values from the client side.
+  - name: km-slo-latency
+    interval: 15s
+    rules:
+      - record: km:http_latency_seconds:p95_5m
+        expr: histogram_quantile(0.95, sum by (le) (rate(http_server_request_duration_bucket{job="KnowledgeMarket.Api", http_route!~"/health.*"}[5m])))
+      - record: km:http_latency_seconds:p99_5m
+        expr: histogram_quantile(0.99, sum by (le) (rate(http_server_request_duration_bucket{job="KnowledgeMarket.Api", http_route!~"/health.*"}[5m])))
+      - record: km:http_latency_seconds:p95_5m_by_route
+        expr: histogram_quantile(0.95, sum by (le, http_route) (rate(http_server_request_duration_bucket{job="KnowledgeMarket.Api", http_route!~"/health.*"}[5m])))

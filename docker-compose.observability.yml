@@ -1,0 +1,113 @@
+# Grafana's LGTM stack for local use: the API sends traces, metrics and logs to an
+# OpenTelemetry Collector, which stores them in Tempo, Mimir and Loki for Grafana.
+#
+# An overlay, so plain `docker compose up` is unchanged. Layer it on top:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.observability.yml --profile full up -d --build
+#
+# Grafana: http://localhost:3000 (admin / the password below; local only).
+# Every port is bound to 127.0.0.1, so nothing here is reachable from the network.
+#
+# The same OpenTelemetry instrumentation exports to Application Insights in Azure; only
+# the exporter differs (see the OpenTelemetry section of src/Api/Program.cs).
+
+services:
+  api:
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_METRIC_EXPORT_INTERVAL: "15000"
+    networks:
+      - telemetry
+    depends_on:
+      otel-collector:
+        condition: service_started
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.156.0
+    container_name: km-otel-collector
+    command: ["--config=/etc/otel-collector.yaml"]
+    # Root only to read the Docker socket for per-container CPU and memory (docker_stats).
+    # Anything that can read that socket controls Docker, which is why this stack is local only.
+    user: "0:0"
+    volumes:
+      - ./observability/otel-collector.yaml:/etc/otel-collector.yaml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      # OTLP, so an API started with `dotnet run` can send here too.
+      - "127.0.0.1:4317:4317"
+      - "127.0.0.1:4318:4318"
+    networks:
+      - telemetry
+    depends_on:
+      - tempo
+      - mimir
+      - loki
+
+  tempo:
+    image: grafana/tempo:3.0.0
+    container_name: km-tempo
+    command: ["-config.file=/etc/tempo.yaml"]
+    user: "0:0"
+    volumes:
+      - ./observability/tempo.yaml:/etc/tempo.yaml:ro
+      - tempodata:/var/tempo
+    ports:
+      - "127.0.0.1:3200:3200"
+    networks:
+      - telemetry
+
+  mimir:
+    image: grafana/mimir:3.1.2
+    container_name: km-mimir
+    command: ["-config.file=/etc/mimir.yaml", "-target=all"]
+    volumes:
+      - ./observability/mimir.yaml:/etc/mimir.yaml:ro
+      - ./observability/mimir-rules:/etc/mimir/rules:ro
+      - mimirdata:/data
+    ports:
+      # k6 pushes its own results here (Prometheus remote write), and PromQL is served here.
+      - "127.0.0.1:9009:9009"
+    networks:
+      - telemetry
+
+  loki:
+    image: grafana/loki:3.7.3
+    container_name: km-loki
+    command: ["-config.file=/etc/loki.yaml"]
+    volumes:
+      - ./observability/loki.yaml:/etc/loki.yaml:ro
+      - lokidata:/loki
+    ports:
+      - "127.0.0.1:3100:3100"
+    networks:
+      - telemetry
+
+  grafana:
+    image: grafana/grafana:13.1.0
+    container_name: km-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-local-dev-only}
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_NEWS_NEWS_FEED_ENABLED: "false"
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafanadata:/var/lib/grafana
+    ports:
+      - "127.0.0.1:3000:3000"
+    networks:
+      - telemetry
+    depends_on:
+      - tempo
+      - mimir
+      - loki
+
+networks:
+  telemetry:
+
+volumes:
+  tempodata:
+  mimirdata:
+  lokidata:
+  grafanadata:

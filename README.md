@@ -36,6 +36,10 @@ Terraform. Load testing, observability and a full deployment pipeline are what I
 - **Tested against the real thing.** 119 backend tests, including 77 integration tests that
   boot the real API against a SQL Server 2022 container with Testcontainers, plus 39 frontend
   tests. CI runs all of them on every pull request.
+- **Load tested in production.** k6 through Front Door against the live site: 20 page views a
+  second (68 requests a second) for 5 minutes with no errors and reads at p95 87 ms, p99
+  186 ms, and a stress ramp that found where the single 0.5-vCPU API replica runs out. See
+  [Load testing](#load-testing).
 - **Built for a serverless database.** A connection retry policy and a 90-second connect
   timeout ride out Azure SQL's auto-pause, and the API refuses to start in Production with
   missing or placeholder configuration.
@@ -210,6 +214,40 @@ dotnet test                          # 119 backend tests (Docker must be running
 cd src/frontend && npm test          # 39 frontend tests
 cd src/frontend && npm run lint
 ```
+
+## Load testing
+
+k6 scripts in [`loadtest/`](loadtest/README.md) make the same API calls the Angular pages
+make, as anonymous visitors and as signed-in learners who log in once and reuse their cookie
+and CSRF token. The objectives are 99.5% of requests without a 5xx, and reads at p95 under
+300 ms and p99 under 1 s; every script fails when one is missed.
+
+Results from the live Azure site (one API replica with 0.5 vCPU, measured by k6 from a home
+connection, so the numbers include Front Door and the network):
+
+| Test | Load | Failed | Reads p50 | p95 | p99 |
+|---|---|---|---|---|---|
+| Steady, 5 min | 20 page views/s, 68 requests/s | 0 of 20,348 | 42 ms | 87 ms | 186 ms |
+| Stress, step 1 | 30 page views/s, about 104 requests/s | 0 | 44 ms | 64 ms | 85 ms |
+| Stress, step 2 | 50 page views/s, about 169 requests/s | 0 | 44 ms | 81 ms | 108 ms |
+| Stress, step 3 | 70 page views/s, stopped after a few seconds | 0 | 154 ms | 1,558 ms | 1,762 ms |
+
+Inside the API, p95 stayed between 12 and 46 ms in every 10-second window up to 50 page views
+a second, then jumped to 1.1 s within seconds of stepping to 70. The web app peaked at 14%
+CPU, SQL at 4% and Redis at 14%, while the API averaged about 80% of its 0.5 vCPU over that
+minute, so the evidence points to the API's CPU. The sustainable rate is somewhere between 50
+and 70 page views a second; step 3 ran too briefly to narrow it further.
+
+Against the objectives, availability was 100% in every minute of every run. The latency
+budget burned at 0x in every minute except two: the first minute of the steady run (1.3x,
+a new revision warming up) and the minute of step 3 (2.2x against the p99 objective).
+
+The first request after the database has auto-paused takes 45 to 53 seconds while it resumes.
+That cold start is the slowest thing a visitor can hit, not load.
+
+`docker-compose.observability.yml` adds a local Grafana stack (OpenTelemetry Collector, Tempo,
+Mimir, Loki) with the SLOs as recording rules, multi-window burn-rate alerts and a dashboard
+that puts k6's numbers next to the server's.
 
 ## Architecture
 

@@ -1,0 +1,120 @@
+# OpenTelemetry Collector: the one address the API sends telemetry to. It fans each
+# signal out to its store: traces to Tempo, metrics to Mimir, logs to Loki.
+#
+# It also turns the trace stream into two metric streams, so latency graphs can link
+# straight to an example trace (exemplars) and Grafana can draw a service map:
+#   span_metrics  -> calls and duration per span
+#   service_graph -> who calls whom (API -> SQL Server, Redis, Azurite)
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+  # CPU and memory per container, read from the Docker socket. This is what shows
+  # whether the API is pinned at its 0.5 CPU limit during a load test.
+  #
+  # Throttling matters as much as usage. A 0.5 CPU limit means 50 ms of CPU per 100 ms
+  # period; a burst that uses it up early freezes every thread in the container until the
+  # next period, even when average usage looks fine.
+  docker_stats:
+    endpoint: unix:///var/run/docker.sock
+    collection_interval: 5s
+    timeout: 5s
+    metrics:
+      container.cpu.limit:
+        enabled: true
+      container.cpu.throttling_data.periods:
+        enabled: true
+      container.cpu.throttling_data.throttled_periods:
+        enabled: true
+      container.cpu.throttling_data.throttled_time:
+        enabled: true
+      container.cpu.utilization:
+        enabled: true
+      container.memory.percent:
+        enabled: true
+      container.memory.usage.limit:
+        enabled: true
+
+connectors:
+  span_metrics:
+    histogram:
+      explicit:
+        buckets: [5ms, 10ms, 25ms, 50ms, 100ms, 250ms, 500ms, 1s, 2s, 5s, 10s]
+    dimensions:
+      - name: http.request.method
+      - name: http.route
+      - name: http.response.status_code
+    exemplars:
+      enabled: true
+    metrics_flush_interval: 15s
+
+  service_graph:
+    latency_histogram_buckets: [10ms, 50ms, 100ms, 250ms, 1s, 5s]
+    store:
+      ttl: 2s
+
+processors:
+  # First in every pipeline: drops data before the collector runs out of memory and
+  # takes the whole telemetry path down with it.
+  memory_limiter:
+    check_interval: 1s
+    limit_percentage: 75
+    spike_limit_percentage: 20
+
+  batch:
+    timeout: 5s
+    send_batch_size: 1024
+    send_batch_max_size: 2048
+
+  # Cookies and tokens must never become searchable in Tempo or Loki.
+  attributes/redact:
+    actions:
+      - key: http.request.header.authorization
+        action: delete
+      - key: http.request.header.cookie
+        action: delete
+      - key: http.response.header.set_cookie
+        action: delete
+      - key: http.request.header.x-csrf
+        action: delete
+
+exporters:
+  otlp_grpc/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+  otlp_http/mimir:
+    endpoint: http://mimir:9009/otlp
+    tls:
+      insecure: true
+  otlp_http/loki:
+    endpoint: http://loki:3100/otlp
+    tls:
+      insecure: true
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+service:
+  extensions: [health_check]
+  telemetry:
+    logs:
+      level: warn
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, attributes/redact, batch]
+      exporters: [otlp_grpc/tempo, span_metrics, service_graph]
+    metrics:
+      receivers: [otlp, docker_stats, span_metrics, service_graph]
+      processors: [memory_limiter, batch]
+      exporters: [otlp_http/mimir]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, attributes/redact, batch]
+      exporters: [otlp_http/loki]

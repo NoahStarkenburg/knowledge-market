@@ -15,9 +15,9 @@
 //           configured. The first request is timed on its own: the serverless database
 //           pauses when idle, and waking it is the cold start real visitors hit.
 // steady    a fixed rate for 10 minutes.
-// stress    steps up until the objectives break. It stops itself early once the site is
-//           clearly overloaded (p95 over 1.5 s or 2% errors in a step), so production is
-//           never pushed further than needed to find the limit.
+// stress    steps up through fixed rates, holding each, to find where the objectives break.
+//           Choose the steps with START, STEP and STEPS; it stops itself if more than 5% of
+//           requests fail.
 //
 // steady and stress go past the API's own rate limiter (200 requests a minute per client)
 // and Front Door's WAF limits, so they need both lifted for this machine for the length of
@@ -54,15 +54,15 @@ const scenarios = {
 
 const thresholds = sloThresholds();
 if (TEST === 'stress') {
+  // Per-step objectives are reported but do not stop the test: k6 evaluates a threshold from
+  // the start of the whole test, so an abort on a step's latency fires in the first seconds
+  // of that step, before it has been held long enough to mean anything. The load stays
+  // bounded instead by the top step and by maxVUs, and one guard stops the test if
+  // requests start failing.
+  thresholds.http_req_failed.push({ threshold: 'rate<0.05', abortOnFail: true, delayAbortEval: '1m' });
   for (const t of stressSteps) {
-    thresholds[`http_req_duration{stage:${t},kind:read}`] = [
-      `p(95)<${SLO.read.p95}`, `p(99)<${SLO.read.p99}`,
-      { threshold: 'p(95)<1500', abortOnFail: true, delayAbortEval: '30s' },
-    ];
-    thresholds[`http_req_failed{stage:${t}}`] = [
-      `rate<${(1 - SLO.availability).toFixed(3)}`,
-      { threshold: 'rate<0.02', abortOnFail: true, delayAbortEval: '20s' },
-    ];
+    thresholds[`http_req_duration{stage:${t},kind:read}`] = [`p(95)<${SLO.read.p95}`, `p(99)<${SLO.read.p99}`];
+    thresholds[`http_req_failed{stage:${t}}`] = [`rate<${(1 - SLO.availability).toFixed(3)}`];
     thresholds[`http_reqs{stage:${t}}`] = ['count>0'];
     thresholds[`iterations{stage:${t}}`] = ['count>0'];
   }

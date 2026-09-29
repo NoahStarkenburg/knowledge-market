@@ -216,7 +216,7 @@ public static class AuthEndpoints
 
             Log.Information("User registered {UserId} {Email}", user.Id, LogSanitizer.MaskEmail(emailValue));
 
-            // Send verification email (fire-and-forget — don't fail registration if email fails)
+            // Send verification email (fire-and-forget - don't fail registration if email fails)
             var frontendUrl = cfg["Cors:FrontendOrigin"] ?? "http://localhost:4200";
             var verifyUrl = $"{http.Request.Scheme}://{http.Request.Host}/api/auth/verify-email?token={Uri.EscapeDataString(user.VerificationToken!)}";
             _ = emailSvc.SendAsync(user.Email.Value, "Verify your KnowledgeMarket email",
@@ -349,7 +349,7 @@ public static class AuthEndpoints
             IConfiguration cfg,
             CancellationToken ct) =>
         {
-            // Always return 200 — never reveal whether the email exists
+            // Always return 200 - never reveal whether the email exists
             if (!string.IsNullOrWhiteSpace(req.Email))
             {
                 string emailValue;

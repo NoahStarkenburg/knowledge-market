@@ -81,7 +81,7 @@ h3 {
 }
 
 @layer utilities {
-  /* Faint structural grid — the quiet Swiss scaffold behind loud type. */
+  /* Faint structural grid - the quiet Swiss scaffold behind loud type. */
   .bg-grid {
     background-image: linear-gradient(
         to right,

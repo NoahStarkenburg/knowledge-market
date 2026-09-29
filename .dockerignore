@@ -1,4 +1,4 @@
-# .dockerignore — what NOT to send to the Docker daemon as build context.
+# .dockerignore - what NOT to send to the Docker daemon as build context.
 #
 # `docker build .` tars up the whole directory and uploads it before a single
 # instruction runs. This file trims that upload. It is not cosmetic:
@@ -15,7 +15,7 @@
 # Syntax matches .gitignore. ** matches any number of directories.
 
 # ---------------------------------------------------------------------------
-# Build output — regenerated inside the image, must not come from the host
+# Build output - regenerated inside the image, must not come from the host
 # ---------------------------------------------------------------------------
 **/bin/
 **/obj/
@@ -37,7 +37,7 @@
 **/appsettings.*.local.json
 
 # ---------------------------------------------------------------------------
-# Version control and CI metadata — never needed to compile the app
+# Version control and CI metadata - never needed to compile the app
 # ---------------------------------------------------------------------------
 .git/
 .gitignore

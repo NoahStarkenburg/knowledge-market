@@ -3,7 +3,7 @@ using Application.Abstractions;
 
 namespace Infrastructure.Email;
 
-// Used in development — logs instead of sending
+// Used in development - logs instead of sending
 public sealed class NullEmailService : IEmailService
 {
     private readonly ILogger<NullEmailService> _logger;

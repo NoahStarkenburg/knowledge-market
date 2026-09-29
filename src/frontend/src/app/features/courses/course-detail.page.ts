@@ -12,8 +12,8 @@ import { CoursePurchaseCardComponent } from './course-purchase-card';
 import { CourseReviewsComponent, type ReviewSummary } from './course-reviews';
 
 // Orchestrates the course page: loads the course + lessons, renders the hero, intro video,
-// and curriculum, and composes the feature components — reviews, the owner panel, and the
-// purchase card — which each own their slice of state.
+// and curriculum, and composes the feature components - reviews, the owner panel, and the
+// purchase card - which each own their slice of state.
 @Component({
   selector: 'app-course-detail-page',
   imports: [RouterLink, LucideAngularModule, FormErrorListComponent, SkeletonComponent, CourseOwnerPanelComponent, CoursePurchaseCardComponent, CourseReviewsComponent],

@@ -4,7 +4,7 @@
 # `azurerm` turns "resource azurerm_container_app ..." into Azure API calls.
 #
 # Versions are constrained, not left open:
-#   ~> 5.5   means ">= 5.5.0 and < 6.0.0" — minor and patch updates, never a new
+#   ~> 5.5   means ">= 5.5.0 and < 6.0.0" - minor and patch updates, never a new
 #            major version, because major versions are where settings get renamed
 #            and removed.
 # The exact versions actually used are then recorded in .terraform.lock.hcl,

@@ -1,4 +1,4 @@
-# Where Terraform keeps its STATE — the record of every resource it manages.
+# Where Terraform keeps its STATE - the record of every resource it manages.
 #
 # Without a backend block, state is a terraform.tfstate file in this folder.
 # That breaks as soon as a second machine is involved: your laptop and GitHub

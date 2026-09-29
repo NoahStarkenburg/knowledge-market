@@ -6,7 +6,7 @@ namespace IntegrationTests;
 
 // Pins the fix for the regression where an empty Stripe:SecretKey made new StripeClient("")
 // throw at construction, breaking every endpoint that merely injects IPaymentService (order
-// reads, enrollment checks) — not just the payment operations. No server/container needed.
+// reads, enrollment checks) - not just the payment operations. No server/container needed.
 public class StripePaymentServiceTests
 {
     private static StripePaymentService Build(string? secretKey)

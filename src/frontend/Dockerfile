@@ -8,8 +8,8 @@
 # paths below are relative to this directory.
 #
 # Two stages. Node compiles the TypeScript and Angular templates into static
-# files, then is thrown away. nginx — which is a few megabytes and contains no
-# compiler — is what actually ships.
+# files, then is thrown away. nginx - which is a few megabytes and contains no
+# compiler - is what actually ships.
 
 
 # ---------------------------------------------------------------------------
@@ -26,7 +26,7 @@
 FROM node:22-alpine AS build
 WORKDIR /app
 
-# Manifest and lockfile first, then install — the same layer-caching trick the
+# Manifest and lockfile first, then install - the same layer-caching trick the
 # API Dockerfile uses with .csproj files. Dependencies change far less often
 # than source, so this layer survives most commits and npm ci is skipped.
 COPY package.json package-lock.json ./
@@ -42,7 +42,7 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 # Now the source. Changes on nearly every commit, which is why it comes last.
-# .dockerignore keeps the host's node_modules out — it holds Windows binaries
+# .dockerignore keeps the host's node_modules out - it holds Windows binaries
 # (@esbuild/win32-x64) that would break this Linux build.
 COPY . .
 
@@ -51,8 +51,8 @@ COPY . .
 # The Angular compiler replaces each identifier declared in
 # src/build-config.d.ts with the value given by --define, so these have to
 # exist NOW, as build arguments, not when the container runs. Every one is
-# public by design — a Stripe PUBLISHABLE key and an OAuth client ID identify
-# the app, they do not authorize anything — so it is fine that they end up
+# public by design - a Stripe PUBLISHABLE key and an OAuth client ID identify
+# the app, they do not authorize anything - so it is fine that they end up
 # readable in the shipped JavaScript. A secret must never be passed this way:
 # build args are visible in `docker history`.
 #
@@ -102,7 +102,7 @@ COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 ENV NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1     API_UPSTREAM=api:8080     API_HOST=api     FRONT_DOOR_ID=
 
 # The whole point of stage 1. --from=build reads from that stage's filesystem,
-# NOT from your machine — your local dist/ is excluded by .dockerignore and is
+# NOT from your machine - your local dist/ is excluded by .dockerignore and is
 # never used. The files are baked into this image and nginx serves them off its
 # own disk.
 COPY --from=build /app/dist/frontend/browser /usr/share/nginx/html

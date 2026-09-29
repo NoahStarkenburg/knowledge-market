@@ -15,14 +15,14 @@ each demonstrates a different cache-freshness strategy.
 | Read | Key | TTL | Freshness strategy | Why |
 |---|---|---|---|---|
 | Course detail (`GET /api/courses/{id}`) | `course:v1:{id}` | 5 min | **Explicit invalidation** on every write | Hit on every course page view; identical for all viewers. An owner who edits a course must see the change immediately, so we evict the key on write and let the TTL act only as a backstop. |
-| Catalog stats (`GET /api/catalog/stats`) | `catalog:stats:v1` | 60 s | **TTL only** (no invalidation) | An anonymous landing-page aggregate (a plpgsql function over the courses + users tables) — the single most-repeated, most-shared read. A newly published course showing up in the count a minute late is fine, so a short TTL is simpler and cheaper than invalidating on every platform-wide publish/delete. |
+| Catalog stats (`GET /api/catalog/stats`) | `catalog:stats:v1` | 60 s | **TTL only** (no invalidation) | An anonymous landing-page aggregate (a plpgsql function over the courses + users tables) - the single most-repeated, most-shared read. A newly published course showing up in the count a minute late is fine, so a short TTL is simpler and cheaper than invalidating on every platform-wide publish/delete. |
 
 These are the two canonical strategies for keeping a cache fresh: **invalidate on write** when the
 data must be correct the instant it changes, and **let a short TTL expire** when a little staleness
 is acceptable and the write points are too numerous to chase.
 
-Deliberately **not** cached: per-user lists (`/courses` includes the caller's own drafts — low reuse),
-search (arbitrary `q`/tags/price/sort permutations — low hit rate, and results should feel live), and
+Deliberately **not** cached: per-user lists (`/courses` includes the caller's own drafts - low reuse),
+search (arbitrary `q`/tags/price/sort permutations - low hit rate, and results should feel live), and
 anything gated by per-user access. Caching those would trade a large invalidation/​correctness burden
 for a small hit rate.
 
@@ -80,7 +80,7 @@ seq 50 | xargs -P 50 -I{} curl -s -o /dev/null http://localhost:8080/api/catalog
 ```
 
 > The .NET distributed-cache provider stores each entry as a Redis **hash** (`data` + `absexp` +
-> `sldexp` fields), which is why a plain `GET` returns `WRONGTYPE` — read the payload with
+> `sldexp` fields), which is why a plain `GET` returns `WRONGTYPE` - read the payload with
 > `HGET <key> data`. Keys are prefixed with `km:` (the configured `InstanceName`).
 
 ## In Azure: Azure Managed Redis with Entra ID
@@ -108,10 +108,10 @@ process.
   catalog stat can be up to 60 s old. That is a conscious choice per read, not an accident.
 - **Invalidation is the hard part.** Every field on the cached DTO creates an obligation: whatever
   can change it must evict the key. Thumbnail/intro-video uploads change the DTO from a *different*
-  service, which is exactly the kind of write path that gets forgotten — hence the shared `CacheKeys`
+  service, which is exactly the kind of write path that gets forgotten - hence the shared `CacheKeys`
   and eviction at each write site. The failure mode of a missed eviction is bounded by the TTL.
 - **Invalidation can silently fail.** If Redis is down during a write, `RemoveAsync` swallows the
-  error so the write still succeeds — but the stale entry survives until its TTL. That is the reason
+  error so the write still succeeds - but the stale entry survives until its TTL. That is the reason
   an invalidation-backed key still carries a TTL at all.
 - **Is a PK lookup even worth caching?** Course detail is an indexed single-row read that SQL Server
   serves in well under a millisecond, so the per-request latency win is small. The real payoff is
@@ -120,31 +120,31 @@ process.
 - **Negative caching, on purpose omitted.** A `null` (course not found) is never stored, so a missing
   id keeps hitting the DB. Caching misses would blunt a scraping/enumeration load but risks masking a
   just-created row; not worth it here.
-- **Cache stampede — handled for catalog stats, not for course detail.** When a hot key expires,
+- **Cache stampede - handled for catalog stats, not for course detail.** When a hot key expires,
   concurrent misses can all hit the DB at once (a "thundering herd"). The catalog-stats reload uses
   single-flight to collapse that to one rebuild (see above); course detail does not, because its load
   spreads across per-id keys rather than concentrating on one global key, so no single expiry stampedes.
-  Single-flight has its own caveats: coalescing is per instance (not fleet-wide — that needs a
+  Single-flight has its own caveats: coalescing is per instance (not fleet-wide - that needs a
   distributed Redis lock), and waiters share the leader's execution, so a cancelled leader cancels the
   followers (fine for a fast aggregate, riskier for a long reload).
 - **Serialization cost + shape coupling.** Values are JSON. That is debuggable and portable, but a
-  change to `CourseDto`'s shape can leave incompatible bytes in Redis — which is what the `v1` segment
+  change to `CourseDto`'s shape can leave incompatible bytes in Redis - which is what the `v1` segment
   in every key is for: bump it and the whole family is abandoned rather than mis-deserialized.
 
 ## Teaching note
 
-A cache is not a database — it is a **bet that the recent past predicts the near future**, and every
+A cache is not a database - it is a **bet that the recent past predicts the near future**, and every
 design decision is about how you handle being wrong. Cache-aside keeps the database as the single
 source of truth and treats Redis as a disposable copy: read Redis, and only on a miss pay for the
 real query and remember the answer. That inverts the usual worry. You are no longer asking "how do I
 make this fast," you are asking "how wrong am I willing to be, and for how long?" The course detail
-answers *not at all if I can help it* — so it evicts the key the moment an edit lands and keeps a TTL
+answers *not at all if I can help it* - so it evicts the key the moment an edit lands and keeps a TTL
 only to survive the case where that eviction never reached Redis. The catalog stat answers *a minute
-is fine* — so it skips invalidation entirely and just lets a short TTL expire, trading a sliver of
+is fine* - so it skips invalidation entirely and just lets a short TTL expire, trading a sliver of
 staleness for a lot less coupling. The engineering that makes this trustworthy is unglamorous and
 lives at the edges: keep one source of truth for the key so a producer and its invalidators can't
 drift; put eviction at the write site, including the write paths in other services that quietly touch
 the same data; and make the whole thing degrade to "just slower" when Redis disappears, because a
 cache that can take down your app is worse than no cache at all. Get those three right and caching
 stops being a performance hack and becomes what it should be: a boundary you can reason about, where
-you have decided — read by read — exactly how much truth you are willing to trade for speed.
+you have decided - read by read - exactly how much truth you are willing to trade for speed.

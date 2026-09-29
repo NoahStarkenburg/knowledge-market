@@ -1,6 +1,6 @@
 # The resource group that holds the application.
 #
-# It already exists — it was created by hand with the Azure CLI before Terraform
+# It already exists - it was created by hand with the Azure CLI before Terraform
 # was chosen. There are two ways to bring an existing resource under Terraform:
 #
 #   1. delete it and let Terraform recreate it
@@ -12,7 +12,7 @@
 # `terraform plan` shows "1 to import", and `terraform apply` records it.
 #
 # After the first successful apply the import block has done its job. Leaving it
-# in is harmless — Terraform ignores an import whose resource is already in state.
+# in is harmless - Terraform ignores an import whose resource is already in state.
 
 data "azurerm_subscription" "current" {}
 

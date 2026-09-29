@@ -1,4 +1,4 @@
-// Request/response contracts for the KnowledgeMarket API — the single source of truth
+// Request/response contracts for the KnowledgeMarket API - the single source of truth
 // for every shape the backend speaks.
 
 // ---------- Auth ----------

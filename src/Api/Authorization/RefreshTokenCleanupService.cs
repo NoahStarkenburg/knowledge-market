@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Api.Authorization;
 
 // Runs once at startup then every 24 hours.
-// Deletes refresh tokens that expired more than 24 hours ago — keeps the
+// Deletes refresh tokens that expired more than 24 hours ago - keeps the
 // table small without removing tokens that are still technically "just expired"
 // (in case of clock skew or pending in-flight requests).
 public sealed class RefreshTokenCleanupService(

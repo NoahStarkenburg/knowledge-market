@@ -37,7 +37,7 @@ namespace Infrastructure.Storage
 
             // Presigned URLs are handed to the browser, so they must point at a host the
             // browser can actually reach. Inside Docker the S3 client targets "minio:9000",
-            // which only resolves on the compose network — sign against the public endpoint.
+            // which only resolves on the compose network - sign against the public endpoint.
             var publicUrl = cfg["Storage:S3:PublicServiceUrl"];
             if (string.IsNullOrWhiteSpace(publicUrl) || publicUrl == cfg["Storage:S3:ServiceUrl"])
             {

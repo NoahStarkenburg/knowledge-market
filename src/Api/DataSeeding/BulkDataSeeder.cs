@@ -113,7 +113,7 @@ public sealed class BulkDataSeeder
         var markdownResults = await Task.WhenAll(markdownTasks);
         result.LessonMarkdownWrites = markdownResults.Length;
 
-        // Update storage paths — we need to reload lessons since tracker was cleared
+        // Update storage paths - we need to reload lessons since tracker was cleared
         var lessonPathMap = markdownResults.ToDictionary(r => r.lesson.Id, r => r.path);
         foreach (var batch in lessons.Chunk(BulkSeedConstants.BatchSize))
         {

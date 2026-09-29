@@ -171,7 +171,7 @@ public sealed class StripePaymentService : IPaymentService
         }
         catch (StripeException ex) when (ex.StripeError?.Code == "resource_missing")
         {
-            // Already canceled/absent in Stripe — proceed with the local cancel.
+            // Already canceled/absent in Stripe - proceed with the local cancel.
         }
     }
 }

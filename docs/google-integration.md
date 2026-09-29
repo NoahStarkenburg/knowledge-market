@@ -1,9 +1,9 @@
-# KnowledgeMarket — Google Integration Setup
+# KnowledgeMarket - Google Integration Setup
 
 Two independent Google features, both off by default and enabled purely by configuration:
 
-1. **Sign in with Google** — OAuth/OIDC login. Backend mints its own session cookies after Google verifies identity.
-2. **Import from Google Drive** — creators can pick a video or image from their Drive when uploading course media. The browser downloads the picked file and sends it to the existing upload endpoints, so no backend changes were needed.
+1. **Sign in with Google** - OAuth/OIDC login. Backend mints its own session cookies after Google verifies identity.
+2. **Import from Google Drive** - creators can pick a video or image from their Drive when uploading course media. The browser downloads the picked file and sends it to the existing upload endpoints, so no backend changes were needed.
 
 Both use the same Google Cloud project and OAuth consent screen.
 
@@ -26,7 +26,7 @@ For production, add your real origins/redirect URIs alongside the localhost ones
 
 ## 2. Backend config (Sign in with Google)
 
-Set these via environment variables or user-secrets (never commit them — this is a public repo):
+Set these via environment variables or user-secrets (never commit them - this is a public repo):
 
 ```
 Authentication__Google__ClientId=<client id>
@@ -68,4 +68,4 @@ The OAuth Client ID is the same value in both places. Both values are public by 
 | "Import from Google Drive" button | `src/frontend/src/app/shared/components/google-drive-button.ts` |
 | Wired into uploads | `lesson-content-manage.page.ts` (file, video), `course-owner-panel.ts` (thumbnail, intro video) |
 
-Drive import reuses the existing upload endpoints (`/lessons/upload`, `/thumbnail`, `/intro-video`) and their MIME/size validation — a Drive-picked file follows the exact same path as a locally chosen one.
+Drive import reuses the existing upload endpoints (`/lessons/upload`, `/thumbnail`, `/intro-video`) and their MIME/size validation - a Drive-picked file follows the exact same path as a locally chosen one.

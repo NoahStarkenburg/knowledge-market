@@ -719,7 +719,6 @@ app.UseSerilogRequestLogging(opts =>
         if (ctx.GetEndpoint() is RouteEndpoint re) dc.Set("RouteTemplate", re.RoutePattern.RawText ?? "");
     };
 });
-app.UseRateLimiter();
 
 // Serve SPA if you build to wwwroot (optional)
 app.UseDefaultFiles();
@@ -769,6 +768,10 @@ app.UseStatusCodePages(async context =>
 // Auth
 app.UseAuthentication();
 
+// After authentication, so the per-user limits can see who the user is. Placed before it,
+// every limit silently fell back to the client address and signed-in users behind one
+// address (an office, a phone carrier's NAT) shared a single budget.
+app.UseRateLimiter();
 
 
 // CSRF check (cookie auth requires it for unsafe methods)

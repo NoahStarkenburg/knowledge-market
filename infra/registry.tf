@@ -1,6 +1,8 @@
-# The private registry the container images are pushed to and pulled from.
+# The private registry the container images are pushed to and pulled from,
+# when enable_acr is on.
 
 resource "azurerm_container_registry" "main" {
+  count               = var.enable_acr ? 1 : 0
   name                = "${local.compact_prefix}acr${local.suffix}"
   location            = azurerm_resource_group.app.location
   resource_group_name = azurerm_resource_group.app.name
@@ -16,14 +18,16 @@ resource "azurerm_container_registry" "main" {
 
 # Pull only. Neither app can push, delete or overwrite an image.
 resource "azurerm_role_assignment" "api_acr_pull" {
-  scope                = azurerm_container_registry.main.id
+  count                = var.enable_acr ? 1 : 0
+  scope                = azurerm_container_registry.main[0].id
   role_definition_name = "AcrPull"
   principal_id         = azurerm_user_assigned_identity.api.principal_id
   principal_type       = "ServicePrincipal"
 }
 
 resource "azurerm_role_assignment" "web_acr_pull" {
-  scope                = azurerm_container_registry.main.id
+  count                = var.enable_acr ? 1 : 0
+  scope                = azurerm_container_registry.main[0].id
   role_definition_name = "AcrPull"
   principal_id         = azurerm_user_assigned_identity.web.principal_id
   principal_type       = "ServicePrincipal"

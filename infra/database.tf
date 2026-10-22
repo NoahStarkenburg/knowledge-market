@@ -88,7 +88,7 @@ resource "azurerm_private_dns_zone_virtual_network_link" "sql" {
   count               = var.sql_private_endpoint ? 1 : 0
   name                = "sql"
   private_dns_zone_id = azurerm_private_dns_zone.sql[0].id
-  virtual_network_id  = azurerm_virtual_network.main.id
+  virtual_network_id  = azurerm_virtual_network.main[0].id
   tags                = var.tags
 }
 
@@ -97,7 +97,7 @@ resource "azurerm_private_endpoint" "sql" {
   name                = "${var.prefix}-sql-pe"
   location            = azurerm_resource_group.app.location
   resource_group_name = azurerm_resource_group.app.name
-  subnet_id           = azurerm_subnet.private_endpoints.id
+  subnet_id           = azurerm_subnet.private_endpoints[0].id
 
   private_service_connection {
     name                           = "sql"

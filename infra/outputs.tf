@@ -13,7 +13,7 @@ output "public_url" {
 
 output "container_registry" {
   description = "Registry to push images to: docker push <this>/knowledgemarket-api:<tag>."
-  value       = azurerm_container_registry.main.login_server
+  value       = local.image_registry
 }
 
 output "api_app_name" {

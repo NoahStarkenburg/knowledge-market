@@ -1,4 +1,6 @@
 # The private network the apps and the database's private endpoint live in.
+# It exists only for the private endpoint: with sql_private_endpoint off, the
+# environment uses Azure's own network and none of this is created.
 #
 #   10.0.0.0/16      knowledgemarket-vnet
 #     10.0.0.0/24      apps                the Container Apps environment
@@ -9,6 +11,7 @@
 # and the database are not.
 
 resource "azurerm_virtual_network" "main" {
+  count               = var.sql_private_endpoint ? 1 : 0
   name                = "${var.prefix}-vnet"
   location            = azurerm_resource_group.app.location
   resource_group_name = azurerm_resource_group.app.name
@@ -17,9 +20,10 @@ resource "azurerm_virtual_network" "main" {
 }
 
 resource "azurerm_subnet" "apps" {
+  count                = var.sql_private_endpoint ? 1 : 0
   name                 = "apps"
   resource_group_name  = azurerm_resource_group.app.name
-  virtual_network_name = azurerm_virtual_network.main.name
+  virtual_network_name = azurerm_virtual_network.main[0].name
   address_prefixes     = ["10.0.0.0/24"]
 
   # Hands the subnet over to Container Apps, which runs its own infrastructure
@@ -35,8 +39,9 @@ resource "azurerm_subnet" "apps" {
 }
 
 resource "azurerm_subnet" "private_endpoints" {
+  count                = var.sql_private_endpoint ? 1 : 0
   name                 = "private-endpoints"
   resource_group_name  = azurerm_resource_group.app.name
-  virtual_network_name = azurerm_virtual_network.main.name
+  virtual_network_name = azurerm_virtual_network.main[0].name
   address_prefixes     = ["10.0.1.0/24"]
 }

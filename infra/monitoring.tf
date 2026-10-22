@@ -16,9 +16,10 @@ resource "azurerm_log_analytics_workspace" "main" {
   sku                 = "PerGB2018"
   retention_in_days   = 30
 
-  # A hard stop on ingestion per day. The first 5 GB a month are free, and a
-  # container stuck in a crash loop can log more than that in a day.
-  daily_quota_gb = 0.5
+  # A hard stop on ingestion per day, because a container stuck in a crash loop
+  # can log gigabytes in a day. The first 5 GB a month are free, and 0.16 GB a
+  # day stays under that even in a 31-day month.
+  daily_quota_gb = 0.16
 
   tags = var.tags
 }

@@ -56,6 +56,17 @@ variable "api_min_replicas" {
   }
 }
 
+variable "web_min_replicas" {
+  description = "nginx replicas kept running with no traffic. 0 costs nothing while idle; the first visitor after a quiet spell waits a few seconds while one starts."
+  type        = number
+  default     = 1
+
+  validation {
+    condition     = contains([0, 1, 2], var.web_min_replicas)
+    error_message = "web_min_replicas must be 0, 1 or 2, the web app's maximum."
+  }
+}
+
 variable "enable_redis" {
   description = "Create Azure Managed Redis for the API's cache. When false the API runs with no cache and every read goes to SQL."
   type        = bool
@@ -63,13 +74,19 @@ variable "enable_redis" {
 }
 
 variable "sql_private_endpoint" {
-  description = "Reach Azure SQL through a private endpoint inside the virtual network (about $7 a month). When false, SQL keeps a public endpoint open to Azure services only, still with Entra ID sign-in only."
+  description = "Reach Azure SQL through a private endpoint (about $7 a month) inside a virtual network that the apps' environment joins. When false there is no virtual network, and SQL keeps a public endpoint open to Azure services only, still with Entra ID sign-in only."
   type        = bool
   default     = true
 }
 
 variable "enable_front_door" {
   description = "Put Azure Front Door (edge caching, firewall rate limits) in front of the site, and accept web traffic only through it. About $35 a month; when false the web app is public on its own address."
+  type        = bool
+  default     = true
+}
+
+variable "enable_acr" {
+  description = "Pull images from our own Azure Container Registry as each app's managed identity (about $5 a month). When false, images come from GitHub Container Registry, which is free for public images: push them there and make each package public."
   type        = bool
   default     = true
 }

@@ -7,6 +7,16 @@
 
 stripe_enabled = true
 
+# Zero-cost mode: nothing that bills by the hour, and both apps scale to zero
+# between visitors. What each switch gives up is in its description in
+# variables.tf.
+enable_front_door    = false
+enable_redis         = false
+sql_private_endpoint = false
+enable_acr           = false
+api_min_replicas     = 0
+web_min_replicas     = 0
+
 # Public by design: Stripe publishable keys identify the account and are also
 # compiled into the front end, where anyone can read them.
 stripe_publishable_key = "pk_test_51T5BfrJ3UJdYmXSLi32geMFyJBezmUNb3qyqYdmvVFFU0GXUouiGG7T6Z0dNjVuec9PBam8YvMjKE3anLBncpVni006JAsHRsX"

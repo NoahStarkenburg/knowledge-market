@@ -15,9 +15,9 @@ resource "azurerm_container_app_environment" "main" {
   log_analytics_workspace_id = azurerm_log_analytics_workspace.main.id
   logs_destination           = "log-analytics"
 
-  # Runs inside our VNet, which is what lets the API reach the database's
-  # private endpoint.
-  infrastructure_subnet_id = azurerm_subnet.apps.id
+  # Runs inside our VNet when the database has a private endpoint, which is
+  # what lets the API reach it. Otherwise it uses Azure's own network.
+  infrastructure_subnet_id = var.sql_private_endpoint ? azurerm_subnet.apps[0].id : null
 
   # Container Apps keeps its own load balancer and addresses in a separate
   # resource group it manages. Named here rather than left to Azure's default.
@@ -43,6 +43,10 @@ locals {
   # Terraform leaves the image alone (ignore_changes below). Otherwise every
   # `terraform apply` would roll production back to this tag.
   initial_image_tag = "initial"
+
+  # Where both images are pulled from. Container Apps pulls public images from
+  # GitHub's registry without any credentials.
+  image_registry = var.enable_acr ? azurerm_container_registry.main[0].login_server : "ghcr.io/noahstarkenburg"
 
   # No password: "Active Directory Managed Identity" makes SqlClient sign in as
   # the identity whose client ID is given as User Id.
@@ -76,9 +80,12 @@ resource "azurerm_container_app" "api" {
     identity_ids = [azurerm_user_assigned_identity.api.id]
   }
 
-  registry {
-    server   = azurerm_container_registry.main.login_server
-    identity = azurerm_user_assigned_identity.api.id
+  dynamic "registry" {
+    for_each = var.enable_acr ? [local.image_registry] : []
+    content {
+      server   = registry.value
+      identity = azurerm_user_assigned_identity.api.id
+    }
   }
 
   # Key Vault references. Container Apps reads each value as the API's identity
@@ -139,7 +146,7 @@ resource "azurerm_container_app" "api" {
 
     container {
       name   = "api"
-      image  = "${azurerm_container_registry.main.login_server}/knowledgemarket-api:${local.initial_image_tag}"
+      image  = "${local.image_registry}/knowledgemarket-api:${local.initial_image_tag}"
       cpu    = 0.5
       memory = "1Gi"
 
@@ -302,9 +309,12 @@ resource "azurerm_container_app" "web" {
     identity_ids = [azurerm_user_assigned_identity.web.id]
   }
 
-  registry {
-    server   = azurerm_container_registry.main.login_server
-    identity = azurerm_user_assigned_identity.web.id
+  dynamic "registry" {
+    for_each = var.enable_acr ? [local.image_registry] : []
+    content {
+      server   = registry.value
+      identity = azurerm_user_assigned_identity.web.id
+    }
   }
 
   ingress {
@@ -330,12 +340,12 @@ resource "azurerm_container_app" "web" {
   }
 
   template {
-    min_replicas = 1
+    min_replicas = var.web_min_replicas
     max_replicas = 2
 
     container {
       name   = "web"
-      image  = "${azurerm_container_registry.main.login_server}/knowledgemarket-web:${local.initial_image_tag}"
+      image  = "${local.image_registry}/knowledgemarket-web:${local.initial_image_tag}"
       cpu    = 0.25
       memory = "0.5Gi"
 

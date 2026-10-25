@@ -1,0 +1,68 @@
+# Mimir: the metrics store, run as a single process (-target=all).
+#   OTLP from the collector   POST /otlp/v1/metrics
+#   k6 remote write           POST /api/v1/push
+#   PromQL for Grafana         /prometheus/api/v1/...
+#
+# The ruler evaluates the SLO recording rules in mimir-rules/. With multitenancy off,
+# every series belongs to the tenant "anonymous", hence mimir-rules/anonymous/.
+multitenancy_enabled: false
+
+server:
+  http_listen_port: 9009
+  log_level: warn
+
+common:
+  storage:
+    backend: filesystem
+    filesystem:
+      dir: /data/common
+
+blocks_storage:
+  backend: filesystem
+  filesystem:
+    dir: /data/blocks
+  tsdb:
+    dir: /data/tsdb
+  bucket_store:
+    sync_dir: /data/tsdb-sync
+
+compactor:
+  data_dir: /data/compactor
+
+distributor:
+  ring:
+    instance_addr: 127.0.0.1
+    kvstore:
+      store: inmemory
+
+ingester:
+  ring:
+    instance_addr: 127.0.0.1
+    kvstore:
+      store: inmemory
+    replication_factor: 1
+
+store_gateway:
+  sharding_ring:
+    replication_factor: 1
+
+ruler:
+  rule_path: /data/ruler-scratch
+  evaluation_interval: 15s
+  poll_interval: 15s
+
+ruler_storage:
+  backend: local
+  local:
+    directory: /etc/mimir/rules
+
+limits:
+  ingestion_rate: 200000
+  ingestion_burst_size: 400000
+  out_of_order_time_window: 1h
+  # OTLP resource attributes normally land only on target_info. Copying these onto every
+  # series is what lets a query split CPU per container and requests per environment.
+  promote_otel_resource_attributes: "container.name,deployment.environment"
+  # k6 sends its latencies as native histograms, which lets PromQL compute a true p95 or
+  # p99 over any window instead of a running figure for the whole test.
+  native_histograms_ingestion_enabled: true

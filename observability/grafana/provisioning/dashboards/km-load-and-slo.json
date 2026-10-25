@@ -1,0 +1,1575 @@
+{
+  "uid": "km-load-slo",
+  "title": "KnowledgeMarket - load tests and SLOs",
+  "tags": [
+    "knowledgemarket",
+    "k6",
+    "slo"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "testid",
+        "label": "k6 test",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "mimir"
+        },
+        "query": {
+          "query": "label_values(k6_vus, testid)",
+          "refId": "q"
+        },
+        "definition": "label_values(k6_vus, testid)",
+        "includeAll": true,
+        "multi": true,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "allValue": ".*",
+        "refresh": 2,
+        "sort": 1
+      }
+    ]
+  },
+  "annotations": {
+    "list": []
+  },
+  "panels": [
+    {
+      "type": "row",
+      "title": "Service level objectives",
+      "id": 1,
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Availability (5m)",
+      "id": 2,
+      "description": "Share of API requests that did not return 5xx over the last 5 minutes. Objective: 99.5%.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 0,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.99
+              },
+              {
+                "color": "green",
+                "value": 0.995
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "1 - km:slo_error_ratio:rate5m",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          }
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Burn rate (1h)",
+      "id": 3,
+      "description": "How fast the 30-day error budget is being spent, judged on the last hour. 1 is exactly on budget; 14.4 pages someone.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 5,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "x",
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 14.4
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "km:slo_burn_rate:1h",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          }
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Budget this range would use",
+      "id": 4,
+      "description": "If all 30 days looked like the selected time range, the share of the error budget they would use. Over 100% misses the objective.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 10,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.5
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(increase(http_server_request_duration_count{job=\"KnowledgeMarket.Api\", http_route!~\"/health.*\", http_response_status_code=~\"5..\"}[$__range])) or vector(0)) / sum(increase(http_server_request_duration_count{job=\"KnowledgeMarket.Api\", http_route!~\"/health.*\"}[$__range])) / 0.005",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          }
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "API p95 (5m)",
+      "id": 5,
+      "description": "Server-side p95 from the API's own histogram. Objective: 300 ms.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 15,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0.3
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "km:http_latency_seconds:p95_5m",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          }
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "API p99 (5m)",
+      "id": 6,
+      "description": "Server-side p99. Objective: 1 s.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 19,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "km:http_latency_seconds:p99_5m",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          }
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Error budget burn rate",
+      "id": 7,
+      "description": "The fast-burn alert fires when BOTH the 1h and 5m windows are above 14.4; the sustained-burn alert when both the 6h and 30m windows are above 6.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 5
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "x",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "stacking": {
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "line+area"
+            }
+          },
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 6
+              },
+              {
+                "color": "red",
+                "value": 14.4
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "km:slo_burn_rate:5m",
+          "legendFormat": "5m window",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "km:slo_burn_rate:30m",
+          "legendFormat": "30m window",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          }
+        },
+        {
+          "refId": "C",
+          "expr": "km:slo_burn_rate:1h",
+          "legendFormat": "1h window",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          }
+        },
+        {
+          "refId": "D",
+          "expr": "km:slo_burn_rate:6h",
+          "legendFormat": "6h window",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          }
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Availability SLI",
+      "id": 8,
+      "description": "The objective is 99.5%.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 5
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "stacking": {
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "1 - km:slo_error_ratio:rate5m",
+          "legendFormat": "5m window",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "1 - km:slo_error_ratio:rate1h",
+          "legendFormat": "1h window",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          }
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "Client view: what k6 measured, through nginx",
+      "id": 9,
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 13
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Throughput",
+      "id": 10,
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 14
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "stacking": {
+              "mode": "none"
+            }
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(k6_http_reqs_total{testid=~\"$testid\"}[30s]))",
+          "legendFormat": "requests/s",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(k6_http_reqs_total{testid=~\"$testid\", expected_response=\"false\"}[30s]))",
+          "legendFormat": "failed requests/s",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          }
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Client latency, API reads",
+      "id": 11,
+      "description": "From k6's native histograms, so these are exact windowed percentiles. Objective: p95 300 ms, p99 1 s.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 14
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "stacking": {
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "line+area"
+            }
+          },
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.3
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum(rate(k6_http_req_duration_seconds{testid=~\"$testid\", kind=\"read\"}[30s])))",
+          "legendFormat": "p50",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum(rate(k6_http_req_duration_seconds{testid=~\"$testid\", kind=\"read\"}[30s])))",
+          "legendFormat": "p95",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          }
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum(rate(k6_http_req_duration_seconds{testid=~\"$testid\", kind=\"read\"}[30s])))",
+          "legendFormat": "p99",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          }
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Client error rate",
+      "id": 12,
+      "description": "Any response outside 200-399, including 429 and nginx's own 502 or 504.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 14
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "stacking": {
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "line+area"
+            }
+          },
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0.005
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(k6_http_reqs_total{testid=~\"$testid\", expected_response=\"false\"}[30s])) / sum(rate(k6_http_reqs_total{testid=~\"$testid\"}[30s]))",
+          "legendFormat": "failed share",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          }
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Client p95 by request",
+      "id": 13,
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 16,
+        "x": 0,
+        "y": 22
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "stacking": {
+              "mode": "none"
+            }
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (name) (rate(k6_http_req_duration_seconds{testid=~\"$testid\"}[1m])))",
+          "legendFormat": "{{name}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          }
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Virtual users",
+      "id": 14,
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 16,
+        "y": 22
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "stacking": {
+              "mode": "none"
+            }
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(k6_vus{testid=~\"$testid\"})",
+          "legendFormat": "active VUs",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          }
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "Server view: the API's own metrics",
+      "id": 15,
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 31
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Requests by status",
+      "id": 16,
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 32
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 60,
+            "stacking": {
+              "mode": "normal"
+            }
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (http_response_status_code) (rate(http_server_request_duration_count{job=\"KnowledgeMarket.Api\", http_route!~\"/health.*\"}[1m]))",
+          "legendFormat": "{{http_response_status_code}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          }
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Server latency",
+      "id": 17,
+      "description": "Estimated from the histogram's buckets.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 32
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "stacking": {
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "line+area"
+            }
+          },
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.3
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(http_server_request_duration_bucket{job=\"KnowledgeMarket.Api\", http_route!~\"/health.*\"}[1m])))",
+          "legendFormat": "p50",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_request_duration_bucket{job=\"KnowledgeMarket.Api\", http_route!~\"/health.*\"}[1m])))",
+          "legendFormat": "p95",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          }
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_request_duration_bucket{job=\"KnowledgeMarket.Api\", http_route!~\"/health.*\"}[1m])))",
+          "legendFormat": "p99",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          }
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Server p95 by route",
+      "id": 18,
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 32
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "stacking": {
+              "mode": "none"
+            }
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "topk(8, histogram_quantile(0.95, sum by (le, http_route) (rate(http_server_request_duration_bucket{job=\"KnowledgeMarket.Api\", http_route!~\"/health.*\"}[1m]))))",
+          "legendFormat": "{{http_route}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          }
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Requests in flight and connections",
+      "id": 19,
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 40
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "stacking": {
+              "mode": "none"
+            }
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(http_server_active_requests{job=\"KnowledgeMarket.Api\"})",
+          "legendFormat": "requests in progress",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "sum(kestrel_active_connections{job=\"KnowledgeMarket.Api\"})",
+          "legendFormat": "open connections",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          }
+        },
+        {
+          "refId": "C",
+          "expr": "sum(kestrel_queued_connections{job=\"KnowledgeMarket.Api\"})",
+          "legendFormat": "queued connections",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          }
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Rate limiter decisions",
+      "id": 20,
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 40
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "stacking": {
+              "mode": "none"
+            }
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (aspnetcore_rate_limiting_result) (rate(aspnetcore_rate_limiting_requests{job=\"KnowledgeMarket.Api\"}[1m]))",
+          "legendFormat": "{{aspnetcore_rate_limiting_result}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          }
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Cache reads",
+      "id": 21,
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 40
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "stacking": {
+              "mode": "none"
+            }
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (result) (rate(km_cache_requests{job=\"KnowledgeMarket.Api\"}[1m]))",
+          "legendFormat": "{{result}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          }
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "Saturation: is something full?",
+      "id": 22,
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 48
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "CPU cores used",
+      "id": 23,
+      "description": "The API is capped at 0.5 cores and SQL Server at 2, as in Azure. A line flat against its limit is the bottleneck.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 49
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "stacking": {
+              "mode": "none"
+            }
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(container_cpu_usage_total{container_name=~\"knowledge-market-api-1|knowledge-market-web-1|km-sqlserver|km-redis\"}[1m]) / 1e9",
+          "legendFormat": "{{container_name}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "container_cpu_limit{container_name=~\"knowledge-market-api-1|km-sqlserver\"}",
+          "legendFormat": "limit {{container_name}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          }
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Memory",
+      "id": 24,
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 49
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "stacking": {
+              "mode": "none"
+            }
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "container_memory_usage_total{container_name=~\"knowledge-market-api-1|km-sqlserver|knowledge-market-web-1\"}",
+          "legendFormat": "{{container_name}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          }
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": ".NET thread pool",
+      "id": 25,
+      "description": "A growing queue means work is waiting for a thread: CPU is exhausted, or something is blocking threads.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 57
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "stacking": {
+              "mode": "none"
+            }
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(dotnet_thread_pool_queue_length{job=\"KnowledgeMarket.Api\"})",
+          "legendFormat": "queued work items",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "sum(dotnet_thread_pool_thread_count{job=\"KnowledgeMarket.Api\"})",
+          "legendFormat": "threads",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          }
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "GC pause share",
+      "id": 26,
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 57
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "stacking": {
+              "mode": "none"
+            }
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(dotnet_gc_pause_time{job=\"KnowledgeMarket.Api\"}[1m]))",
+          "legendFormat": "time paused",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          }
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "SQL command time",
+      "id": 27,
+      "description": "Measured by SqlClient inside the API, so it includes any wait for a pooled connection.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 57
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "stacking": {
+              "mode": "none"
+            }
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(db_client_operation_duration_bucket{job=\"KnowledgeMarket.Api\"}[1m])))",
+          "legendFormat": "p50",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(db_client_operation_duration_bucket{job=\"KnowledgeMarket.Api\"}[1m])))",
+          "legendFormat": "p95",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir"
+          }
+        }
+      ]
+    }
+  ]
+}

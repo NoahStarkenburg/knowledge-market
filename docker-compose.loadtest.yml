@@ -1,0 +1,57 @@
+# Load-test settings, layered on top of docker-compose.yml and
+# docker-compose.observability.yml. See loadtest/README.md for how to run everything.
+#
+# Three changes, each there to make local numbers mean something for production:
+#
+# 1. The same CPU and memory Azure gives each container (infra/apps.tf), and SQL Server
+#    capped at the 2 vCores the serverless database can scale to (infra/database.tf).
+#    Without caps the API would use all of this machine's cores and the results would say
+#    nothing about one Azure replica.
+#
+# 2. nginx trusts a Front Door ID again, as it does in Azure. In production Front Door
+#    stamps every request with X-Azure-FDID and the visitor's address in X-Azure-ClientIP,
+#    and nginx believes that address only when the ID matches. Here k6 plays Front Door:
+#    it sends this ID and a different client address per simulated visitor, so the API's
+#    per-address rate limits see many visitors instead of one machine. Everything behind
+#    nginx runs exactly as in production. The flip side matches production too: with this
+#    overlay every request without the ID gets 403, so a browser pointed at localhost:8080
+#    gets nothing. Browse the app with the plain stack instead.
+#
+# 3. A one-off `seed` service fills the database with the bulk demo data. The bulk seed
+#    endpoint only exists in Development, so this is the API image started once as
+#    Development, pointed at the same database and storage, then stopped.
+
+services:
+  api:
+    cpus: 0.5
+    mem_limit: 1g
+
+  web:
+    cpus: 0.25
+    mem_limit: 512m
+    environment:
+      FRONT_DOOR_ID: ${LOADTEST_FRONT_DOOR_ID:-local-loadtest-front-door}
+
+  mssql:
+    cpus: 2
+    mem_limit: 6g
+
+  seed:
+    profiles: ["seed"]
+    image: knowledge-market-api:local
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Default: "Server=mssql,1433;Database=km;User Id=sa;Password=Dev_Only_LocalPassword_123!;TrustServerCertificate=true"
+      Storage__Provider: azureblob
+      Storage__AzureBlob__ConnectionString: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;"
+      Storage__AzureBlob__PublicServiceUri: http://localhost:10000/devstoreaccount1
+      Redis__ConnectionString: redis:6379
+    ports:
+      - "127.0.0.1:5199:8080"
+    networks:
+      - data
+    depends_on:
+      mssql:
+        condition: service_healthy
+      azurite:
+        condition: service_healthy

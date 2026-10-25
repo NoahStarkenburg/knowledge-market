@@ -1,0 +1,122 @@
+# Alert rules as code. They read the SLO series Mimir's ruler records (see
+# observability/mimir-rules/anonymous/slo.yaml) and show in Grafana under Alerting.
+# No contact point is configured, so nothing is emailed; the alert states are the point.
+#
+# Every rule fires on something a user would feel, not on a cause like high CPU.
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: KnowledgeMarket SLOs
+    folder: KnowledgeMarket
+    interval: 30s
+    rules:
+      # Multi-window, multi-burn-rate alerts (Google SRE Workbook, chapter 5). The long
+      # window says the burn is big enough to matter; the short window says it is still
+      # happening, so the alert clears within minutes of a fix instead of an hour later.
+      #
+      # 14.4x over 1 hour spends 2% of the 30-day budget in that hour.
+      - uid: km-slo-fast-burn
+        title: Availability SLO - fast error budget burn
+        condition: C
+        for: 1m
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: mimir
+            model: { refId: A, instant: true, expr: 'km:slo_burn_rate:1h' }
+          - refId: B
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: mimir
+            model: { refId: B, instant: true, expr: 'km:slo_burn_rate:5m' }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: math, expression: '$A > 14.4 && $B > 14.4' }
+        noDataState: OK
+        execErrState: Error
+        labels:
+          severity: page
+        annotations:
+          summary: 'Errors are spending the 30-day budget 14.4x too fast (1h burn {{ humanize $values.A.Value }}x, 5m burn {{ humanize $values.B.Value }}x). At this rate the budget is gone in about 2 days.'
+
+      # 6x over 6 hours spends 5% of the budget in those 6 hours: slower, but sustained.
+      - uid: km-slo-slow-burn
+        title: Availability SLO - sustained error budget burn
+        condition: C
+        for: 5m
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: mimir
+            model: { refId: A, instant: true, expr: 'km:slo_burn_rate:6h' }
+          - refId: B
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: mimir
+            model: { refId: B, instant: true, expr: 'km:slo_burn_rate:30m' }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: math, expression: '$A > 6 && $B > 6' }
+        noDataState: OK
+        execErrState: Error
+        labels:
+          severity: page
+        annotations:
+          summary: 'Errors have spent the budget 6x too fast for 6 hours (6h burn {{ humanize $values.A.Value }}x, 30m burn {{ humanize $values.B.Value }}x).'
+
+      - uid: km-5xx-rate
+        title: More than 5% of requests failing
+        condition: C
+        for: 2m
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: mimir
+            model: { refId: A, instant: true, expr: 'km:slo_error_ratio:rate5m' }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: A, conditions: [{ evaluator: { type: gt, params: [0.05] } }] }
+        noDataState: OK
+        execErrState: Error
+        labels:
+          severity: warning
+        annotations:
+          summary: '{{ humanizePercentage $values.A.Value }} of API requests returned 5xx over the last 5 minutes.'
+
+      # The latency SLO is 95% of requests under 300 ms.
+      - uid: km-latency-p95
+        title: p95 latency above the 300 ms objective
+        condition: C
+        for: 5m
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: mimir
+            model: { refId: A, instant: true, expr: 'km:http_latency_seconds:p95_5m' }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: A, conditions: [{ evaluator: { type: gt, params: [0.3] } }] }
+        noDataState: OK
+        execErrState: Error
+        labels:
+          severity: warning
+        annotations:
+          summary: 'API p95 latency has been {{ humanizeDuration $values.A.Value }} for 5 minutes, above the 300 ms objective.'
+
+      # Silence is the failure here, so no data is what fires it.
+      - uid: km-api-not-reporting
+        title: API is not reporting metrics
+        condition: C
+        for: 3m
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: mimir
+            model: { refId: A, instant: true, expr: 'sum(rate(dotnet_process_cpu_time{job="KnowledgeMarket.Api"}[2m]))' }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: A, conditions: [{ evaluator: { type: lt, params: [0] } }] }
+        noDataState: Alerting
+        execErrState: Alerting
+        labels:
+          severity: page
+        annotations:
+          summary: No runtime metrics from the API for 3 minutes. The API or its telemetry pipeline is down.

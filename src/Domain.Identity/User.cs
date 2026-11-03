@@ -95,6 +95,17 @@ public sealed class User
         VerificationTokenExpiresAt = DateTimeOffset.UtcNow.AddHours(24);
     }
 
+    // Resending keeps a still-valid token, so the link in every earlier email keeps working.
+    public void RenewVerificationToken()
+    {
+        if (VerificationToken is null || DateTimeOffset.UtcNow > VerificationTokenExpiresAt)
+        {
+            RegenerateVerificationToken();
+            return;
+        }
+        VerificationTokenExpiresAt = DateTimeOffset.UtcNow.AddHours(24);
+    }
+
     public bool VerifyEmail(string token)
     {
         if (IsEmailVerified) return true;

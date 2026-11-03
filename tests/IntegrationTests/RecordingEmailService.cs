@@ -15,6 +15,12 @@ public sealed partial class RecordingEmailService : IEmailService
         return Task.CompletedTask;
     }
 
+    public string FirstLinkSentTo(string to)
+    {
+        var html = _sent.First(e => e.To == to && LinkPattern().IsMatch(e.Html)).Html;
+        return LinkPattern().Match(html).Groups[1].Value;
+    }
+
     public string LastLinkSentTo(string to)
     {
         var html = _sent.Last(e => e.To == to && LinkPattern().IsMatch(e.Html)).Html;

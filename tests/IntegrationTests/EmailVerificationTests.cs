@@ -21,11 +21,12 @@ public class EmailVerificationTests(ApiFactory factory)
     }
 
     // Clicks the link in the newest email sent to this address, as the user would.
-    private async Task AssertEmailedLinkVerifiesAsync(HttpClient client, string email)
-    {
-        var link = new Uri(factory.Emails.LastLinkSentTo(email));
+    private Task AssertEmailedLinkVerifiesAsync(HttpClient client, string email)
+        => AssertLinkVerifiesAsync(client, factory.Emails.LastLinkSentTo(email));
 
-        var resp = await client.GetAsync(link.PathAndQuery);
+    private static async Task AssertLinkVerifiesAsync(HttpClient client, string link)
+    {
+        var resp = await client.GetAsync(new Uri(link).PathAndQuery);
 
         Assert.Equal(HttpStatusCode.Redirect, resp.StatusCode);
         Assert.EndsWith("/verify-email?success=true", resp.Headers.Location!.ToString());
@@ -56,6 +57,18 @@ public class EmailVerificationTests(ApiFactory factory)
 
         var me = await client.GetFromJsonAsync<JsonElement>("/api/users/me");
         Assert.True(me.GetProperty("isEmailVerified").GetBoolean());
+    }
+
+    [Fact]
+    public async Task Sign_up_link_still_verifies_after_a_resend()
+    {
+        var email = NewEmail();
+        var client = await RegisteredClientAsync(email);
+
+        var resend = await client.PostAsync("/api/auth/resend-verification", null);
+        resend.EnsureSuccessStatusCode();
+
+        await AssertLinkVerifiesAsync(client, factory.Emails.FirstLinkSentTo(email));
     }
 
     [Fact]

@@ -20,8 +20,10 @@ resource "azurerm_container_app_environment" "main" {
   infrastructure_subnet_id = var.sql_private_endpoint ? azurerm_subnet.apps[0].id : null
 
   # Container Apps keeps its own load balancer and addresses in a separate
-  # resource group it manages. Named here rather than left to Azure's default.
-  infrastructure_resource_group_name = "${var.prefix}-env-infra-rg"
+  # resource group it manages, but only when the environment joins our VNet.
+  # Without one Azure ignores the name and reports none, and Terraform would
+  # plan to replace the environment on every apply.
+  infrastructure_resource_group_name = var.sql_private_endpoint ? "${var.prefix}-env-infra-rg" : null
 
   # Consumption: billed per second of use, with a monthly free allowance.
   workload_profile {

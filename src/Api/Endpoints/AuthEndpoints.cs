@@ -330,7 +330,7 @@ public static class AuthEndpoints
             if (user is null) return Results.Unauthorized();
             if (user.IsEmailVerified) return Results.BadRequest(new { message = "Email already verified." });
 
-            user.RegenerateVerificationToken();
+            user.RenewVerificationToken();
             await db.SaveChangesAsync(ct);
 
             var frontendUrl = cfg["Cors:FrontendOrigin"] ?? "http://localhost:4200";
